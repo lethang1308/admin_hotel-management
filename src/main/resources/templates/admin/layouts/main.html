@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' | ' + (${appName} ?: 'Admin Portal')">Admin Portal</title>
+    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+</head>
+<body>
+<div class="admin-shell">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+    <div class="admin-main">
+        <div th:replace="~{admin/fragments/header :: header(${pageTitle})}"></div>
+        <main class="admin-content">
+            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+            <th:block th:replace="${content}"/>
+        </main>
+        <div th:replace="~{admin/fragments/footer :: footer}"></div>
+    </div>
+</div>
+<script th:src="@{/admin/js/admin.js}"></script>
+</body>
+</html>

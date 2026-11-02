@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layouts/main :: layout(${errorTitle} ?: 'Error', ~{::section})}">
+<body>
+<section>
+    <div class="card" style="max-width:600px; margin:2rem auto; text-align:center;">
+        <h1 style="margin:0 0 0.5rem 0; color:var(--danger);" th:text="${status} ?: 500">500</h1>
+        <h2 style="margin:0 0 0.75rem 0;" th:text="${errorTitle} ?: 'Error'">Error</h2>
+        <p style="color:var(--text-muted); margin-bottom:1.5rem;" th:text="${errorMessage} ?: 'An error occurred.'"></p>
+        <a th:href="@{/admin}" class="btn btn-primary">Return to Dashboard</a>
+    </div>
+</section>
+</body>
+</html>

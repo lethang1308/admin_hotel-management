@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>403 Forbidden</title>
+    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+</head>
+<body>
+<div class="auth-wrapper">
+    <div class="card auth-card" style="text-align:center;">
+        <h1 style="margin:0; color:var(--danger);">403</h1>
+        <h2 style="margin:0.5rem 0;">Access Denied</h2>
+        <p style="color:var(--text-muted); margin-bottom:1.5rem;">
+            You do not have sufficient permissions to view this resource.
+        </p>
+        <a th:href="@{/admin/login}" class="btn btn-primary">Go to Sign In</a>
+    </div>
+</div>
+</body>
+</html>

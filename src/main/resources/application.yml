@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:enterprise-backend-base}
+  profiles:
+    default: dev
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:backend/.env[.properties]
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  thymeleaf:
+    cache: true
+    encoding: UTF-8
+    mode: HTML
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    whitelabel:
+      enabled: false
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+
+logging:
+  pattern:
+    level: "%5p [cid:%X{correlationId:-none}]"
+
+app:
+  name: ${APP_NAME:Enterprise Management System}
+  jwt:
+    signing-key: ${JWT_SIGNING_KEY:${JWT_SECRET:}}
+    issuer: ${JWT_ISSUER:enterprise-backend-base}
+    access-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+    refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
+    allow-ephemeral-dev-key: false
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+    allowed-headers: Authorization,Content-Type,Accept,X-Correlation-Id
+    exposed-headers: X-Correlation-Id
+    allow-credentials: true
+    max-age-seconds: 3600
+  pagination:
+    default-page-size: 10
+    max-page-size: 100
+  openapi:
+    public-access: false
+  seed:
+    admin:
+      enabled: false
+      email: ${ADMIN_SEED_EMAIL:}
+      password: ${ADMIN_SEED_PASSWORD:}
+      full-name: ${ADMIN_SEED_FULL_NAME:System Administrator}

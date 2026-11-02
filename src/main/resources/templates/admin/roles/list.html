@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layouts/main :: layout('Roles & Access', ~{::section})}">
+<body>
+<section>
+    <div class="page-toolbar">
+        <div>
+            <h1 class="page-title">System Roles (RBAC)</h1>
+            <p style="margin:0.25rem 0 0 0; color:var(--text-muted); font-size:0.9rem;">
+                Registered role definitions managed via Flyway migrations
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Role Code</th>
+                    <th>Display Name</th>
+                    <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="role : ${roles}">
+                    <td th:text="${role.id}">1</td>
+                    <td><span class="badge badge-role" th:text="${role.code}">ADMIN</span></td>
+                    <td th:text="${role.name}">Administrator</td>
+                    <td th:text="${role.description}">Full system access</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

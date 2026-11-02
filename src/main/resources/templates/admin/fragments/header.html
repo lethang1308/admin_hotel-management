@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<header class="admin-header" th:fragment="header(pageTitle)">
+    <div>
+        <strong th:text="${pageTitle}">Dashboard</strong>
+    </div>
+    <div class="header-user">
+        <span th:text="${currentAdminName} ?: ${currentAdminEmail}">Administrator</span>
+        <form th:action="@{/admin/logout}" method="post" style="margin:0;">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-outline btn-sm">Sign Out</button>
+        </form>
+    </div>
+</header>
+</body>
+</html>

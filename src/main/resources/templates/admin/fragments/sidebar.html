@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside class="admin-sidebar" th:fragment="sidebar">
+    <a th:href="@{/admin}" class="sidebar-brand">
+        <img th:src="@{/admin/images/logo.svg}" alt="Logo" width="24" height="24">
+        <span th:text="${appName} ?: 'Enterprise Admin'">Enterprise Admin</span>
+    </a>
+    <ul class="sidebar-nav">
+        <li>
+            <a th:href="@{/admin}"
+               th:classappend="${currentPath == '/admin'} ? 'active' : ''">Dashboard</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/users}"
+               th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active' : ''">Users</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/roles}"
+               th:classappend="${currentPath != null and currentPath.startsWith('/admin/roles')} ? 'active' : ''">Roles &amp; Access</a>
+        </li>
+        <li>
+            <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener">API Docs (Swagger)</a>
+        </li>
+    </ul>
+</aside>
+</body>
+</html>

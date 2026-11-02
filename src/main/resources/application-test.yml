@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test_base_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    root: WARN
+    com.example.hotelmanagement: INFO
+
+app:
+  jwt:
+    allow-ephemeral-dev-key: true
+    access-expiration-seconds: 900
+    refresh-expiration-seconds: 604800
+  cors:
+    allowed-origins: http://example.test
+  openapi:
+    public-access: true
+  seed:
+    admin:
+      enabled: false

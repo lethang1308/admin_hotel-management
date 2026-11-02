@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Sign In | ' + (${appName} ?: 'Admin Portal')">Admin Sign In</title>
+    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+</head>
+<body>
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <img th:src="@{/admin/images/logo.svg}" alt="Logo" width="36" height="36">
+            <h2 style="margin:0.5rem 0 0.25rem 0;" th:text="${appName} ?: 'Admin Portal'">Admin Portal</h2>
+            <p style="margin:0; color:var(--text-muted); font-size:0.9rem;">Sign in with an Administrator account</p>
+        </div>
+
+        <div th:if="${param.error}" class="alert alert-error">
+            Invalid email address or password.
+        </div>
+        <div th:if="${param.disabled}" class="alert alert-error">
+            This account has been deactivated or locked.
+        </div>
+        <div th:if="${param.accessDenied}" class="alert alert-error">
+            Access denied. Administrator privileges (ADMIN role) are required.
+        </div>
+        <div th:if="${param.logout}" class="alert alert-info">
+            You have signed out securely.
+        </div>
+
+        <form th:action="@{/admin/login}" method="post">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input class="form-control" id="email" name="email" type="email" required autofocus
+                       placeholder="admin@example.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-control" id="password" name="password" type="password" required
+                       placeholder="Enter your password">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">
+                Sign In to Admin
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

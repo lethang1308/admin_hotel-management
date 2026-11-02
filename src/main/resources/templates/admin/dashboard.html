@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layouts/main :: layout('Dashboard', ~{::section})}">
+<body>
+<section>
+    <div class="page-toolbar">
+        <div>
+            <h1 class="page-title">System Overview</h1>
+            <p style="margin:0.25rem 0 0 0; color:var(--text-muted); font-size:0.9rem;">
+                Core RBAC, Authentication &amp; User Management metrics
+            </p>
+        </div>
+        <a th:href="@{/admin/users/create}" class="btn btn-primary">+ Create User</a>
+    </div>
+
+    <div class="stats-grid">
+        <div class="card">
+            <p class="stat-label">Total Accounts</p>
+            <p class="stat-value" th:text="${totalUsers}">0</p>
+        </div>
+        <div class="card">
+            <p class="stat-label">Active Accounts</p>
+            <p class="stat-value" style="color:var(--success);" th:text="${activeUsers}">0</p>
+        </div>
+        <div class="card">
+            <p class="stat-label">Inactive / Locked</p>
+            <p class="stat-value" style="color:var(--warning);" th:text="${inactiveUsers}">0</p>
+        </div>
+        <div class="card">
+            <p class="stat-label">System Roles</p>
+            <p class="stat-value" style="color:var(--primary);" th:text="${totalRoles}">0</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="page-toolbar" style="margin-bottom:0.75rem;">
+            <h3 style="margin:0;">Recently Created Accounts</h3>
+            <a th:href="@{/admin/users}" class="btn btn-outline btn-sm">View All Users</a>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Status</th>
+                    <th>Created At (UTC)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(recentUsers)}">
+                    <td colspan="6" style="text-align:center; color:var(--text-muted);">No user accounts found.</td>
+                </tr>
+                <tr th:each="u : ${recentUsers}">
+                    <td th:text="${u.id}">1</td>
+                    <td th:text="${u.fullName}">Name</td>
+                    <td th:text="${u.email}">user@example.com</td>
+                    <td>
+                        <span th:each="r : ${u.roles}" class="badge badge-role" th:text="${r}">USER</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${u.status.name() == 'ACTIVE'} ? 'badge-active' : (${u.status.name() == 'LOCKED'} ? 'badge-locked' : 'badge-inactive')"
+                              th:text="${u.status}">ACTIVE</span>
+                    </td>
+                    <td th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>
