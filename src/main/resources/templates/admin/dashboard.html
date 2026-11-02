@@ -1,76 +1,252 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Dashboard', ~{::section})}">
+      th:replace="~{admin/layouts/main :: layout('Dashboard', ~{::#dashboard-page}, ~{::#dashboard-scripts})}">
 <body>
-<section>
-    <div class="page-toolbar">
-        <div>
-            <h1 class="page-title">System Overview</h1>
-            <p style="margin:0.25rem 0 0 0; color:var(--text-muted); font-size:0.9rem;">
-                Core RBAC, Authentication &amp; User Management metrics
-            </p>
-        </div>
-        <a th:href="@{/admin/users/create}" class="btn btn-primary">+ Create User</a>
-    </div>
-
-    <div class="stats-grid">
-        <div class="card">
-            <p class="stat-label">Total Accounts</p>
-            <p class="stat-value" th:text="${totalUsers}">0</p>
-        </div>
-        <div class="card">
-            <p class="stat-label">Active Accounts</p>
-            <p class="stat-value" style="color:var(--success);" th:text="${activeUsers}">0</p>
-        </div>
-        <div class="card">
-            <p class="stat-label">Inactive / Locked</p>
-            <p class="stat-value" style="color:var(--warning);" th:text="${inactiveUsers}">0</p>
-        </div>
-        <div class="card">
-            <p class="stat-label">System Roles</p>
-            <p class="stat-value" style="color:var(--primary);" th:text="${totalRoles}">0</p>
+<div id="dashboard-page">
+    <div class="page-heading">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h3 class="mb-1">System Overview</h3>
+                <p class="text-subtitle text-muted mb-0">
+                    Core RBAC, Authentication &amp; User Management metrics
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a th:href="@{/admin/users}" class="btn btn-outline-primary">
+                    <i class="bi bi-people me-1"></i> Manage Users
+                </a>
+                <a th:href="@{/admin/users/create}" class="btn btn-primary">
+                    <i class="bi bi-person-plus-fill me-1"></i> Create User
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="page-toolbar" style="margin-bottom:0.75rem;">
-            <h3 style="margin:0;">Recently Created Accounts</h3>
-            <a th:href="@{/admin/users}" class="btn btn-outline btn-sm">View All Users</a>
-        </div>
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Roles</th>
-                    <th>Status</th>
-                    <th>Created At (UTC)</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:if="${#lists.isEmpty(recentUsers)}">
-                    <td colspan="6" style="text-align:center; color:var(--text-muted);">No user accounts found.</td>
-                </tr>
-                <tr th:each="u : ${recentUsers}">
-                    <td th:text="${u.id}">1</td>
-                    <td th:text="${u.fullName}">Name</td>
-                    <td th:text="${u.email}">user@example.com</td>
-                    <td>
-                        <span th:each="r : ${u.roles}" class="badge badge-role" th:text="${r}">USER</span>
-                    </td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${u.status.name() == 'ACTIVE'} ? 'badge-active' : (${u.status.name() == 'LOCKED'} ? 'badge-locked' : 'badge-inactive')"
-                              th:text="${u.status}">ACTIVE</span>
-                    </td>
-                    <td th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="page-content">
+        <section class="row">
+            <div class="col-12 col-lg-9">
+                <div class="row">
+                    <div class="col-6 col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body px-4 py-4-5">
+                                <div class="row">
+                                    <div class="col-md-4 col-lg-12 col-xl-12 col-xxl-5 d-flex justify-content-start">
+                                        <div class="stats-icon purple mb-2">
+                                            <i class="iconly-boldProfile"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
+                                        <h6 class="text-muted font-semibold">Total Accounts</h6>
+                                        <h6 class="font-extrabold mb-0" th:text="${totalUsers}">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body px-4 py-4-5">
+                                <div class="row">
+                                    <div class="col-md-4 col-lg-12 col-xl-12 col-xxl-5 d-flex justify-content-start">
+                                        <div class="stats-icon green mb-2">
+                                            <i class="iconly-boldAdd-User"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
+                                        <h6 class="text-muted font-semibold">Active Accounts</h6>
+                                        <h6 class="font-extrabold mb-0" th:text="${activeUsers}">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body px-4 py-4-5">
+                                <div class="row">
+                                    <div class="col-md-4 col-lg-12 col-xl-12 col-xxl-5 d-flex justify-content-start">
+                                        <div class="stats-icon red mb-2">
+                                            <i class="iconly-boldShow"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
+                                        <h6 class="text-muted font-semibold">Inactive / Locked</h6>
+                                        <h6 class="font-extrabold mb-0" th:text="${inactiveUsers}">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-lg-3 col-md-6">
+                        <div class="card">
+                            <div class="card-body px-4 py-4-5">
+                                <div class="row">
+                                    <div class="col-md-4 col-lg-12 col-xl-12 col-xxl-5 d-flex justify-content-start">
+                                        <div class="stats-icon blue mb-2">
+                                            <i class="iconly-boldBookmark"></i>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
+                                        <h6 class="text-muted font-semibold">System Roles</h6>
+                                        <h6 class="font-extrabold mb-0" th:text="${totalRoles}">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0">Recently Created Accounts</h4>
+                                <a th:href="@{/admin/users}" class="btn btn-sm btn-light-primary">View All Users</a>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-lg align-middle mb-0">
+                                        <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Email</th>
+                                            <th>Roles</th>
+                                            <th>Status</th>
+                                            <th>Created (UTC)</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr th:if="${#lists.isEmpty(recentUsers)}">
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                No user accounts found.
+                                            </td>
+                                        </tr>
+                                        <tr th:each="u : ${recentUsers}">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar avatar-md">
+                                                        <img th:src="@{/admin/assets/static/images/faces/2.jpg}" alt="Avatar">
+                                                    </div>
+                                                    <div class="ms-3">
+                                                        <p class="font-bold mb-0" th:text="${u.fullName}">Name</p>
+                                                        <small class="text-muted" th:text="'#' + ${u.id}">#1</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td th:text="${u.email}">user@example.com</td>
+                                            <td>
+                                                <span th:each="r : ${u.roles}"
+                                                      class="badge bg-light-primary me-1"
+                                                      th:text="${r}">USER</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge"
+                                                      th:classappend="${u.status.name() == 'ACTIVE'} ? 'bg-light-success' : (${u.status.name() == 'LOCKED'} ? 'bg-light-danger' : 'bg-light-secondary')"
+                                                      th:text="${u.status}">ACTIVE</span>
+                                            </td>
+                                            <td class="text-muted small" th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
+                                            <td class="text-end">
+                                                <a th:href="@{/admin/users/{id}/edit(id=${u.id})}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil-square"></i> Edit
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-3">
+                <div class="card">
+                    <div class="card-body py-4 px-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar avatar-xl">
+                                <img th:src="@{/admin/assets/static/images/faces/1.jpg}" alt="Admin">
+                            </div>
+                            <div class="ms-3 name overflow-hidden">
+                                <h5 class="font-bold text-truncate mb-1"
+                                    th:text="${currentAdminName} ?: 'Administrator'">Administrator</h5>
+                                <h6 class="text-muted text-truncate mb-0"
+                                    th:text="${currentAdminEmail} ?: 'admin@example.com'">admin@example.com</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Account Status Ratio</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="chart-visitors-profile"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Quick Navigation</h4>
+                    </div>
+                    <div class="card-content pb-4 px-4 d-grid gap-2">
+                        <a th:href="@{/admin/roles}" class="btn btn-outline-primary text-start">
+                            <i class="bi bi-shield-lock me-2"></i> View System Roles
+                        </a>
+                        <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener"
+                           class="btn btn-light-secondary text-start">
+                            <i class="bi bi-file-earmark-code me-2"></i> REST OpenAPI Docs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
-</section>
+</div>
+
+<th:block id="dashboard-scripts">
+    <script th:src="@{/admin/assets/extensions/apexcharts/apexcharts.min.js}"></script>
+    <script th:inline="javascript">
+        document.addEventListener("DOMContentLoaded", function () {
+            const chartEl = document.getElementById("chart-visitors-profile");
+            if (!chartEl || typeof ApexCharts === "undefined") {
+                return;
+            }
+            const activeCount = /*[[${activeUsers}]]*/ 0;
+            const inactiveCount = /*[[${inactiveUsers}]]*/ 0;
+            const hasData = (activeCount + inactiveCount) > 0;
+
+            const optionsVisitorsProfile = {
+                series: hasData ? [activeCount, inactiveCount] : [1, 0],
+                labels: ["Active", "Inactive / Locked"],
+                colors: ["#435ebe", "#55c6e8"],
+                chart: {
+                    type: "donut",
+                    width: "100%",
+                    height: "300px"
+                },
+                legend: {
+                    position: "bottom"
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: "35%"
+                        }
+                    }
+                }
+            };
+
+            const chartVisitorsProfile = new ApexCharts(chartEl, optionsVisitorsProfile);
+            chartVisitorsProfile.render();
+        });
+    </script>
+</th:block>
 </body>
 </html>

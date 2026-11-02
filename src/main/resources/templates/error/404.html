@@ -2,18 +2,29 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>404 Not Found</title>
-    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Not Found - Mazer Admin</title>
+
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.svg}" type="image/x-icon">
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.png}" type="image/png">
+
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app-dark.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/error.css}">
 </head>
+
 <body>
-<div class="auth-wrapper">
-    <div class="card auth-card" style="text-align:center;">
-        <h1 style="margin:0; color:var(--primary);">404</h1>
-        <h2 style="margin:0.5rem 0;">Page Not Found</h2>
-        <p style="color:var(--text-muted); margin-bottom:1.5rem;">
-            The page you requested does not exist or may have been moved.
-        </p>
-        <a th:href="@{/admin}" class="btn btn-primary">Go to Dashboard</a>
+<script th:src="@{/admin/assets/static/js/initTheme.js}"></script>
+<div id="error">
+    <div class="error-page container">
+        <div class="col-md-8 col-12 offset-md-2">
+            <div class="text-center">
+                <img class="img-error" th:src="@{/admin/assets/static/images/samples/error-404.svg}" alt="Not Found">
+                <h1 class="error-title">Not Found</h1>
+                <p class="fs-5 text-gray-600">The page you are looking for was not found.</p>
+                <a th:href="@{/admin}" class="btn btn-lg btn-outline-primary mt-3">Go Home</a>
+            </div>
+        </div>
     </div>
 </div>
 </body>

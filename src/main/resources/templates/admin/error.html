@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout(${errorTitle} ?: 'Error', ~{::section})}">
+      th:replace="~{admin/layouts/main :: layout(${errorTitle} ?: 'Error', ~{::#admin-error-page}, ~{})}">
 <body>
-<section>
-    <div class="card" style="max-width:600px; margin:2rem auto; text-align:center;">
-        <h1 style="margin:0 0 0.5rem 0; color:var(--danger);" th:text="${status} ?: 500">500</h1>
-        <h2 style="margin:0 0 0.75rem 0;" th:text="${errorTitle} ?: 'Error'">Error</h2>
-        <p style="color:var(--text-muted); margin-bottom:1.5rem;" th:text="${errorMessage} ?: 'An error occurred.'"></p>
-        <a th:href="@{/admin}" class="btn btn-primary">Return to Dashboard</a>
+<div id="admin-error-page">
+    <div class="card">
+        <div class="card-body py-5 text-center">
+            <img class="img-fluid mb-4" style="max-height: 260px;"
+                 th:src="${status == 404} ? @{/admin/assets/static/images/samples/error-404.svg} : (${status == 403} ? @{/admin/assets/static/images/samples/error-403.svg} : @{/admin/assets/static/images/samples/error-500.svg})"
+                 alt="Error Illustration">
+            <h1 class="display-6 fw-bold mb-2"
+                th:text="(${status} ?: 500) + ' - ' + (${errorTitle} ?: 'Error')">500 - Error</h1>
+            <p class="fs-5 text-gray-600 mb-4"
+               th:text="${errorMessage} ?: 'An unexpected error occurred while processing your request.'">
+                An error occurred.
+            </p>
+            <a th:href="@{/admin}" class="btn btn-lg btn-outline-primary">
+                <i class="bi bi-house-door me-1"></i> Return to Dashboard
+            </a>
+        </div>
     </div>
-</section>
+</div>
 </body>
 </html>

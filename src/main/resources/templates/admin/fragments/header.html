@@ -1,17 +1,88 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<header class="admin-header" th:fragment="header(pageTitle)">
-    <div>
-        <strong th:text="${pageTitle}">Dashboard</strong>
-    </div>
-    <div class="header-user">
-        <span th:text="${currentAdminName} ?: ${currentAdminEmail}">Administrator</span>
-        <form th:action="@{/admin/logout}" method="post" style="margin:0;">
-            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <button type="submit" class="btn btn-outline btn-sm">Sign Out</button>
-        </form>
-    </div>
+<header th:fragment="header">
+    <nav class="navbar navbar-expand navbar-light navbar-top">
+        <div class="container-fluid">
+            <a href="#" class="burger-btn d-block">
+                <i class="bi bi-justify fs-3"></i>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <div class="ms-3 d-none d-md-block">
+                    <span class="badge bg-light-primary" th:text="${appName} ?: 'Enterprise Management System'">
+                        Enterprise Management System
+                    </span>
+                </div>
+
+                <ul class="navbar-nav ms-auto mb-lg-0">
+                    <li class="nav-item me-2">
+                        <a class="nav-link text-gray-600" th:href="@{/swagger-ui.html}" target="_blank"
+                           rel="noopener" title="OpenAPI Documentation">
+                            <i class="bi bi-braces fs-5"></i>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="dropdown">
+                    <a href="#" data-bs-toggle="dropdown" aria-expanded="false" class="text-decoration-none">
+                        <div class="user-menu d-flex">
+                            <div class="user-name text-end me-3">
+                                <h6 class="mb-0 text-gray-600"
+                                    th:text="${currentAdminName} ?: 'Administrator'">Administrator</h6>
+                                <p class="mb-0 text-sm text-gray-600"
+                                   th:text="${currentAdminEmail} ?: 'ADMIN'">ADMIN</p>
+                            </div>
+                            <div class="user-img d-flex align-items-center">
+                                <div class="avatar avatar-md">
+                                    <img th:src="@{/admin/assets/static/images/faces/1.jpg}" alt="Admin Avatar">
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 13rem;">
+                        <li>
+                            <h6 class="dropdown-header"
+                                th:text="'Signed in as ' + (${currentAdminName} ?: 'Admin')">Signed in</h6>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" th:href="@{/admin}">
+                                <i class="icon-mid bi bi-grid me-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" th:href="@{/admin/users}">
+                                <i class="icon-mid bi bi-people me-2"></i> User Management
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" th:href="@{/admin/roles}">
+                                <i class="icon-mid bi bi-shield-lock me-2"></i> Roles &amp; RBAC
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <form th:action="@{/admin/logout}" method="post" class="m-0">
+                                <input type="hidden" th:if="${_csrf != null}"
+                                       th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="icon-mid bi bi-box-arrow-left me-2"></i> Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
 </header>
 </body>
 </html>

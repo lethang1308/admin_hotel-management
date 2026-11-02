@@ -3,50 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="'Sign In | ' + (${appName} ?: 'Admin Portal')">Admin Sign In</title>
-    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+    <title th:text="'Log in - ' + (${appName} ?: 'Admin Portal')">Log in - Admin Portal</title>
+
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.svg}" type="image/x-icon">
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.png}" type="image/png">
+
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app-dark.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/auth.css}">
 </head>
+
 <body>
-<div class="auth-wrapper">
-    <div class="card auth-card">
-        <div style="text-align:center; margin-bottom:1.5rem;">
-            <img th:src="@{/admin/images/logo.svg}" alt="Logo" width="36" height="36">
-            <h2 style="margin:0.5rem 0 0.25rem 0;" th:text="${appName} ?: 'Admin Portal'">Admin Portal</h2>
-            <p style="margin:0; color:var(--text-muted); font-size:0.9rem;">Sign in with an Administrator account</p>
-        </div>
+<script th:src="@{/admin/assets/static/js/initTheme.js}"></script>
+<div id="auth">
+    <div class="row h-100">
+        <div class="col-lg-5 col-12">
+            <div id="auth-left">
+                <div class="auth-logo">
+                    <a th:href="@{/admin}">
+                        <img th:src="@{/admin/assets/static/images/logo/logo.svg}" alt="Logo">
+                    </a>
+                </div>
+                <h1 class="auth-title">Log in.</h1>
+                <p class="auth-subtitle mb-4"
+                   th:text="'Sign in to ' + (${appName} ?: 'Admin Portal') + ' with your Administrator credentials.'">
+                    Sign in with your Administrator credentials.
+                </p>
 
-        <div th:if="${param.error}" class="alert alert-error">
-            Invalid email address or password.
-        </div>
-        <div th:if="${param.disabled}" class="alert alert-error">
-            This account has been deactivated or locked.
-        </div>
-        <div th:if="${param.accessDenied}" class="alert alert-error">
-            Access denied. Administrator privileges (ADMIN role) are required.
-        </div>
-        <div th:if="${param.logout}" class="alert alert-info">
-            You have signed out securely.
-        </div>
+                <div th:if="${param.error}" class="alert alert-light-danger color-danger mb-4">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    Invalid email address or password.
+                </div>
+                <div th:if="${param.disabled}" class="alert alert-light-warning color-warning mb-4">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    This account has been deactivated or locked.
+                </div>
+                <div th:if="${param.accessDenied}" class="alert alert-light-danger color-danger mb-4">
+                    <i class="bi bi-slash-circle me-2"></i>
+                    Access denied. Administrator privileges (ADMIN role) are required.
+                </div>
+                <div th:if="${param.logout}" class="alert alert-light-success color-success mb-4">
+                    <i class="bi bi-check-circle me-2"></i>
+                    You have signed out securely.
+                </div>
 
-        <form th:action="@{/admin/login}" method="post">
-            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <form th:action="@{/admin/login}" method="post">
+                    <input type="hidden" th:if="${_csrf != null}"
+                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
 
-            <div class="form-group">
-                <label class="form-label" for="email">Email Address</label>
-                <input class="form-control" id="email" name="email" type="email" required autofocus
-                       placeholder="admin@example.com">
+                    <div class="form-group position-relative has-icon-left mb-4">
+                        <input type="email" id="email" name="email"
+                               class="form-control form-control-xl"
+                               placeholder="Email address (e.g. admin@example.com)"
+                               required autofocus>
+                        <div class="form-control-icon">
+                            <i class="bi bi-envelope"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group position-relative has-icon-left mb-4">
+                        <input type="password" id="password" name="password"
+                               class="form-control form-control-xl"
+                               placeholder="Password"
+                               required>
+                        <div class="form-control-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-4">
+                        Log in
+                    </button>
+                </form>
+
+                <div class="text-center mt-5 text-lg fs-6">
+                    <p class="text-gray-600 mb-1">
+                        Protected by Spring Security RBAC &amp; CSRF Session Protection.
+                    </p>
+                </div>
             </div>
-
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input class="form-control" id="password" name="password" type="password" required
-                       placeholder="Enter your password">
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;">
-                Sign In to Admin
-            </button>
-        </form>
+        </div>
+        <div class="col-lg-7 d-none d-lg-block">
+            <div id="auth-right"></div>
+        </div>
     </div>
 </div>
 </body>

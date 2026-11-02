@@ -1,24 +1,52 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content)">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content, pageScripts)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${pageTitle} + ' | ' + (${appName} ?: 'Admin Portal')">Admin Portal</title>
-    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+    <title th:text="${pageTitle} + ' - ' + (${appName} ?: 'Mazer Admin')">Dashboard - Mazer Admin</title>
+
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.svg}" type="image/x-icon">
+    <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.png}" type="image/png">
+
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app-dark.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/iconly.css}">
 </head>
+
 <body>
-<div class="admin-shell">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
-    <div class="admin-main">
-        <div th:replace="~{admin/fragments/header :: header(${pageTitle})}"></div>
-        <main class="admin-content">
-            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-            <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
-            <th:block th:replace="${content}"/>
-        </main>
-        <div th:replace="~{admin/fragments/footer :: footer}"></div>
+<script th:src="@{/admin/assets/static/js/initTheme.js}"></script>
+<div id="app">
+    <div id="sidebar" th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+    <div id="main" class="layout-navbar navbar-fixed">
+        <header th:replace="~{admin/fragments/header :: header}"></header>
+
+        <div id="main-content">
+            <div class="flex-grow-1">
+                <div th:if="${successMessage}" class="alert alert-light-success color-success alert-dismissible show fade">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span th:text="${successMessage}">Operation successful</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <div th:if="${errorMessage}" class="alert alert-light-danger color-danger alert-dismissible show fade">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    <span th:text="${errorMessage}">An error occurred</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
+                <th:block th:replace="${content}"/>
+            </div>
+
+            <footer th:replace="~{admin/fragments/footer :: footer}"></footer>
+        </div>
     </div>
 </div>
-<script th:src="@{/admin/js/admin.js}"></script>
+
+<script th:src="@{/admin/assets/static/js/components/dark.js}"></script>
+<script th:src="@{/admin/assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js}"></script>
+<script th:src="@{/admin/assets/compiled/js/app.js}"></script>
+<script th:src="@{/admin/assets/static/js/admin-custom.js}"></script>
+<th:block th:if="${pageScripts != null}" th:replace="${pageScripts}"/>
 </body>
 </html>

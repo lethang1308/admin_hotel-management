@@ -107,6 +107,35 @@ class AdminWebSecurityIntegrationTest {
         mockMvc.perform(get("/admin/users").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("portal.admin@example.com")));
+
+        mockMvc.perform(get("/admin/users/create").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Create User Account")));
+
+        User adminUser = userRepository.findByEmailIgnoreCase("portal.admin@example.com").orElseThrow();
+        mockMvc.perform(get("/admin/users/" + adminUser.getId() + "/edit").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Profile &amp; Role Assignment")));
+
+        mockMvc.perform(get("/admin/roles").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("System Roles (RBAC)")));
+    }
+
+    @Test
+    void shouldServeMazerLoginPageAndStaticAssetsWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/admin/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("auth-left")));
+
+        mockMvc.perform(get("/admin/assets/compiled/css/app.css"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/admin/assets/compiled/js/app.js"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/admin/assets/static/images/logo/logo.svg"))
+                .andExpect(status().isOk());
     }
 
     @Test

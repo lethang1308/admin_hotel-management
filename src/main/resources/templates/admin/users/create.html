@@ -1,62 +1,155 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Create User', ~{::section})}">
+      th:replace="~{admin/layouts/main :: layout('Create User', ~{::#user-create-page}, ~{})}">
 <body>
-<section>
-    <div class="page-toolbar">
-        <h1 class="page-title">Create User Account</h1>
-        <a th:href="@{/admin/users}" class="btn btn-outline">&larr; Back to Users</a>
-    </div>
-
-    <div class="card" style="max-width:640px;">
-        <div th:if="${formError}" class="alert alert-error" th:text="${formError}"></div>
-
-        <form th:action="@{/admin/users}" th:object="${userForm}" method="post">
-            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-
-            <div class="form-group">
-                <label class="form-label" for="fullName">Full Name</label>
-                <input id="fullName" type="text" class="form-control" th:field="*{fullName}" required>
-                <div class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="email">Email Address</label>
-                <input id="email" type="email" class="form-control" th:field="*{email}" required>
-                <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <input id="password" type="password" class="form-control" th:field="*{password}" required
-                       placeholder="8-72 chars, at least 1 letter and 1 number">
-                <div class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="status">Initial Status</label>
-                <select id="status" class="form-control" th:field="*{status}">
-                    <option th:each="st : ${statuses}" th:value="${st}" th:text="${st}"></option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Assigned Roles</label>
-                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
-                    <label th:each="r : ${allRoles}" style="display:flex; align-items:center; gap:0.35rem;">
-                        <input type="checkbox" th:field="*{roles}" th:value="${r.code}">
-                        <span th:text="${r.code} + ' (' + ${r.name} + ')'">USER</span>
-                    </label>
+<div id="user-create-page">
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>Create User Account</h3>
+                    <p class="text-subtitle text-muted">
+                        Provision a new account and assign RBAC system roles
+                    </p>
                 </div>
-                <div class="field-error" th:if="${#fields.hasErrors('roles')}" th:errors="*{roles}"></div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin/users}">Users</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Create User</li>
+                        </ol>
+                    </nav>
+                </div>
             </div>
+        </div>
 
-            <div style="display:flex; gap:0.75rem; margin-top:1.25rem;">
-                <button type="submit" class="btn btn-primary">Create User</button>
-                <a th:href="@{/admin/users}" class="btn btn-outline">Cancel</a>
+        <section id="basic-vertical-layouts">
+            <div class="row">
+                <div class="col-lg-8 col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="card-title mb-0">Account Information</h4>
+                            <a th:href="@{/admin/users}" class="btn btn-sm btn-light-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> Back to Users
+                            </a>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div th:if="${formError}" class="alert alert-light-danger color-danger mb-4">
+                                    <i class="bi bi-exclamation-circle me-2"></i>
+                                    <span th:text="${formError}">Validation error</span>
+                                </div>
+
+                                <form class="form form-vertical" th:action="@{/admin/users}" th:object="${userForm}" method="post">
+                                    <input type="hidden" th:if="${_csrf != null}"
+                                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                                    <div class="form-body">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="form-group has-icon-left mb-3">
+                                                    <label for="fullName" class="form-label">Full Name</label>
+                                                    <div class="position-relative">
+                                                        <input id="fullName" type="text" class="form-control"
+                                                               th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
+                                                               th:field="*{fullName}" placeholder="Enter full name" required>
+                                                        <div class="form-control-icon">
+                                                            <i class="bi bi-person"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-danger small mt-1"
+                                                         th:if="${#fields.hasErrors('fullName')}"
+                                                         th:errors="*{fullName}"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <div class="form-group has-icon-left mb-3">
+                                                    <label for="email" class="form-label">Email Address</label>
+                                                    <div class="position-relative">
+                                                        <input id="email" type="email" class="form-control"
+                                                               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                                               th:field="*{email}" placeholder="user@example.com" required>
+                                                        <div class="form-control-icon">
+                                                            <i class="bi bi-envelope"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-danger small mt-1"
+                                                         th:if="${#fields.hasErrors('email')}"
+                                                         th:errors="*{email}"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <div class="form-group has-icon-left mb-3">
+                                                    <label for="password" class="form-label">Password</label>
+                                                    <div class="position-relative">
+                                                        <input id="password" type="password" class="form-control"
+                                                               th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
+                                                               th:field="*{password}"
+                                                               placeholder="8-72 characters, at least 1 letter and 1 number"
+                                                               required>
+                                                        <div class="form-control-icon">
+                                                            <i class="bi bi-lock"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-danger small mt-1"
+                                                         th:if="${#fields.hasErrors('password')}"
+                                                         th:errors="*{password}"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="status" class="form-label">Initial Account Status</label>
+                                                    <select id="status" class="form-select" th:field="*{status}">
+                                                        <option th:each="st : ${statuses}"
+                                                                th:value="${st}"
+                                                                th:text="${st}"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label d-block">Assigned Roles</label>
+                                                    <div class="d-flex gap-4 flex-wrap pt-1">
+                                                        <div class="form-check" th:each="r : ${allRoles}">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                   th:field="*{roles}"
+                                                                   th:value="${r.code}"
+                                                                   th:id="${'role_' + r.code}">
+                                                            <label class="form-check-label" th:for="${'role_' + r.code}">
+                                                                <span class="fw-semibold" th:text="${r.code}">USER</span>
+                                                                <span class="text-muted small" th:text="'(' + ${r.name} + ')'">(Standard User)</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-danger small mt-1"
+                                                         th:if="${#fields.hasErrors('roles')}"
+                                                         th:errors="*{roles}"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 d-flex justify-content-end gap-2 mt-3">
+                                                <a th:href="@{/admin/users}" class="btn btn-light-secondary">
+                                                    Cancel
+                                                </a>
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="bi bi-check-lg me-1"></i> Create User
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
+        </section>
     </div>
-</section>
+</div>
 </body>
 </html>

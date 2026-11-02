@@ -1,39 +1,68 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Roles & Access', ~{::section})}">
+      th:replace="~{admin/layouts/main :: layout('Roles & RBAC', ~{::#roles-list-page}, ~{})}">
 <body>
-<section>
-    <div class="page-toolbar">
-        <div>
-            <h1 class="page-title">System Roles (RBAC)</h1>
-            <p style="margin:0.25rem 0 0 0; color:var(--text-muted); font-size:0.9rem;">
-                Registered role definitions managed via Flyway migrations
-            </p>
+<div id="roles-list-page">
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>System Roles (RBAC)</h3>
+                    <p class="text-subtitle text-muted">
+                        Registered role definitions managed via Flyway schema migrations
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Roles &amp; RBAC</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="card">
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Role Code</th>
-                    <th>Display Name</th>
-                    <th>Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="role : ${roles}">
-                    <td th:text="${role.id}">1</td>
-                    <td><span class="badge badge-role" th:text="${role.code}">ADMIN</span></td>
-                    <td th:text="${role.name}">Administrator</td>
-                    <td th:text="${role.description}">Full system access</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+        <section class="section">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Available Authorization Roles</h4>
+                    <span class="badge bg-light-secondary" th:text="${#lists.size(roles)} + ' roles'">2 roles</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-lg align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Role Code</th>
+                                <th>Display Name</th>
+                                <th>Description</th>
+                                <th>Created (UTC)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(roles)}">
+                                <td colspan="5" class="text-center text-muted py-4">No system roles registered.</td>
+                            </tr>
+                            <tr th:each="role : ${roles}">
+                                <td class="text-muted fw-semibold" th:text="'#' + ${role.id}">#1</td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${role.code == 'ADMIN'} ? 'bg-light-danger' : 'bg-light-primary'"
+                                          th:text="${role.code}">ADMIN</span>
+                                </td>
+                                <td class="fw-bold" th:text="${role.name}">Administrator</td>
+                                <td class="text-muted" th:text="${role.description}">Full system access</td>
+                                <td class="text-muted small" th:text="${@dateFmt.utc(role.createdAt)}">2026-11-02</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
-</section>
+</div>
 </body>
 </html>

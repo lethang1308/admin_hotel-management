@@ -23,6 +23,7 @@ public class AdminModelAdvice {
     ) {
         model.addAttribute("appName", appProperties.getName());
         model.addAttribute("currentPath", request.getRequestURI());
+        model.addAttribute("currentYear", java.time.Year.now().getValue());
 
         if (authentication != null && authentication.isAuthenticated()) {
             model.addAttribute("currentAdminEmail", authentication.getName());

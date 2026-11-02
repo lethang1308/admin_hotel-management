@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<footer class="admin-footer" th:fragment="footer">
-    <span th:text="(${appName} ?: 'Enterprise Management System') + ' — Modular Spring Boot Base'"></span>
-    <span>Spring Security Session + CSRF Protected</span>
+<footer th:fragment="footer" class="mt-4">
+    <div class="footer clearfix mb-0 text-muted">
+        <div class="float-start">
+            <p><span th:text="${currentYear} ?: '2026'">2026</span> &copy;
+                <span th:text="${appName} ?: 'Enterprise Management System'">Enterprise Management System</span></p>
+        </div>
+        <div class="float-end">
+            <p>Crafted with <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
+                using <span class="text-primary fw-bold">Spring Boot Base</span> &amp; Mazer UI</p>
+        </div>
+    </div>
 </footer>
 </body>
 </html>

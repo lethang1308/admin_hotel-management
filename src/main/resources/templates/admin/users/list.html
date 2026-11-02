@@ -1,118 +1,191 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('User Management', ~{::section})}">
+      th:replace="~{admin/layouts/main :: layout('User Management', ~{::#users-list-page}, ~{})}">
 <body>
-<section>
-    <div class="page-toolbar">
-        <div>
-            <h1 class="page-title">User Management</h1>
-            <p style="margin:0.25rem 0 0 0; color:var(--text-muted); font-size:0.9rem;">
-                Search, filter, assign roles, and control user account status
-            </p>
-        </div>
-        <a th:href="@{/admin/users/create}" class="btn btn-primary">+ Create User</a>
-    </div>
-
-    <div class="card">
-        <form th:action="@{/admin/users}" method="get" class="filter-bar">
-            <input type="text" name="search" class="form-control" placeholder="Search name or email..."
-                   th:value="${search}">
-
-            <select name="status" class="form-control">
-                <option value="">All Statuses</option>
-                <option th:each="st : ${statuses}"
-                        th:value="${st}"
-                        th:text="${st}"
-                        th:selected="${selectedStatus == st}"></option>
-            </select>
-
-            <select name="role" class="form-control">
-                <option value="">All Roles</option>
-                <option th:each="r : ${allRoles}"
-                        th:value="${r.code}"
-                        th:text="${r.code}"
-                        th:selected="${selectedRole != null and selectedRole.equalsIgnoreCase(r.code)}"></option>
-            </select>
-
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a th:href="@{/admin/users}" class="btn btn-outline">Reset</a>
-        </form>
-
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Roles</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:if="${#lists.isEmpty(userPage.items)}">
-                    <td colspan="7" style="text-align:center; color:var(--text-muted);">
-                        No matching users found.
-                    </td>
-                </tr>
-                <tr th:each="u : ${userPage.items}">
-                    <td th:text="${u.id}">1</td>
-                    <td th:text="${u.fullName}">User</td>
-                    <td th:text="${u.email}">user@example.com</td>
-                    <td>
-                        <span th:each="r : ${u.roles}" class="badge badge-role" th:text="${r}">USER</span>
-                    </td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${u.status.name() == 'ACTIVE'} ? 'badge-active' : (${u.status.name() == 'LOCKED'} ? 'badge-locked' : 'badge-inactive')"
-                              th:text="${u.status}">ACTIVE</span>
-                    </td>
-                    <td th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
-                    <td style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                        <a th:href="@{/admin/users/{id}/edit(id=${u.id})}" class="btn btn-outline btn-sm">Edit</a>
-
-                        <form th:if="${u.status.name() == 'ACTIVE'}"
-                              th:action="@{/admin/users/{id}/status(id=${u.id})}"
-                              method="post"
-                              data-confirm="Deactivate this user account?"
-                              style="margin:0;">
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                            <input type="hidden" name="status" value="INACTIVE"/>
-                            <button type="submit" class="btn btn-danger-outline btn-sm">Deactivate</button>
-                        </form>
-
-                        <form th:if="${u.status.name() != 'ACTIVE'}"
-                              th:action="@{/admin/users/{id}/status(id=${u.id})}"
-                              method="post"
-                              style="margin:0;">
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                            <input type="hidden" name="status" value="ACTIVE"/>
-                            <button type="submit" class="btn btn-outline btn-sm">Activate</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination" th:if="${userPage.totalPages > 0}">
-            <span>
-                Page <strong th:text="${userPage.page + 1}">1</strong> of
-                <strong th:text="${userPage.totalPages}">1</strong>
-                (<span th:text="${userPage.totalElements}">0</span> total users)
-            </span>
-            <div style="display:flex; gap:0.5rem;">
-                <a th:if="${userPage.hasPrevious}"
-                   th:href="@{/admin/users(page=${userPage.page - 1}, size=${userPage.size}, sort=${sort}, search=${search}, status=${selectedStatus}, role=${selectedRole})}"
-                   class="btn btn-outline btn-sm">&laquo; Previous</a>
-                <a th:if="${userPage.hasNext}"
-                   th:href="@{/admin/users(page=${userPage.page + 1}, size=${userPage.size}, sort=${sort}, search=${search}, status=${selectedStatus}, role=${selectedRole})}"
-                   class="btn btn-outline btn-sm">Next &raquo;</a>
+<div id="users-list-page">
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>User Management</h3>
+                    <p class="text-subtitle text-muted">
+                        Search, filter, assign roles, and control user account status
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 order-md-2 order-first">
+                    <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">User Management</li>
+                        </ol>
+                    </nav>
+                </div>
             </div>
         </div>
+
+        <section class="section">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h4 class="card-title mb-0">Registered Accounts</h4>
+                    <a th:href="@{/admin/users/create}" class="btn btn-primary">
+                        <i class="bi bi-person-plus-fill me-1"></i> Create User
+                    </a>
+                </div>
+
+                <div class="card-body">
+                    <form th:action="@{/admin/users}" method="get" class="row g-3 align-items-center mb-4">
+                        <div class="col-12 col-md-4">
+                            <div class="form-group position-relative has-icon-left mb-0">
+                                <input type="text" name="search" class="form-control"
+                                       placeholder="Search name or email..."
+                                       th:value="${search}">
+                                <div class="form-control-icon">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option th:each="st : ${statuses}"
+                                        th:value="${st}"
+                                        th:text="${st}"
+                                        th:selected="${selectedStatus == st}"></option>
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-md-2">
+                            <select name="role" class="form-select">
+                                <option value="">All Roles</option>
+                                <option th:each="r : ${allRoles}"
+                                        th:value="${r.code}"
+                                        th:text="${r.code}"
+                                        th:selected="${selectedRole != null and selectedRole.equalsIgnoreCase(r.code)}"></option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="bi bi-funnel me-1"></i> Filter
+                            </button>
+                            <a th:href="@{/admin/users}" class="btn btn-light-secondary">
+                                Reset
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-lg align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Roles</th>
+                                <th>Status</th>
+                                <th>Created (UTC)</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:if="${#lists.isEmpty(userPage.items)}">
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    No matching users found.
+                                </td>
+                            </tr>
+                            <tr th:each="u : ${userPage.items}">
+                                <td class="text-muted fw-semibold" th:text="'#' + ${u.id}">#1</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-md">
+                                            <img th:src="@{/admin/assets/static/images/faces/2.jpg}" alt="Avatar">
+                                        </div>
+                                        <p class="font-bold ms-3 mb-0" th:text="${u.fullName}">User</p>
+                                    </div>
+                                </td>
+                                <td th:text="${u.email}">user@example.com</td>
+                                <td>
+                                    <span th:each="r : ${u.roles}"
+                                          class="badge bg-light-primary me-1"
+                                          th:text="${r}">USER</span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${u.status.name() == 'ACTIVE'} ? 'bg-light-success' : (${u.status.name() == 'LOCKED'} ? 'bg-light-danger' : 'bg-light-secondary')"
+                                          th:text="${u.status}">ACTIVE</span>
+                                </td>
+                                <td class="text-muted small" th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
+                                <td>
+                                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                                        <a th:href="@{/admin/users/{id}/edit(id=${u.id})}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit
+                                        </a>
+
+                                        <form th:if="${u.status.name() == 'ACTIVE'}"
+                                              th:action="@{/admin/users/{id}/status(id=${u.id})}"
+                                              method="post"
+                                              data-confirm="Deactivate this user account?"
+                                              class="m-0">
+                                            <input type="hidden" th:if="${_csrf != null}"
+                                                   th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <input type="hidden" name="status" value="INACTIVE"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-slash-circle me-1"></i> Deactivate
+                                            </button>
+                                        </form>
+
+                                        <form th:if="${u.status.name() != 'ACTIVE'}"
+                                              th:action="@{/admin/users/{id}/status(id=${u.id})}"
+                                              method="post"
+                                              class="m-0">
+                                            <input type="hidden" th:if="${_csrf != null}"
+                                                   th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <input type="hidden" name="status" value="ACTIVE"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-check-circle me-1"></i> Activate
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4"
+                         th:if="${userPage.totalPages > 0}">
+                        <div class="text-muted small">
+                            Page <strong th:text="${userPage.page + 1}">1</strong> of
+                            <strong th:text="${userPage.totalPages}">1</strong>
+                            (<span th:text="${userPage.totalElements}">0</span> total users)
+                        </div>
+
+                        <nav aria-label="User list pagination">
+                            <ul class="pagination pagination-primary mb-0">
+                                <li class="page-item" th:classappend="${!userPage.hasPrevious} ? 'disabled' : ''">
+                                    <a class="page-link"
+                                       th:href="${userPage.hasPrevious} ? @{/admin/users(page=${userPage.page - 1}, size=${userPage.size}, sort=${sort}, search=${search}, status=${selectedStatus}, role=${selectedRole})} : '#'">
+                                        <span aria-hidden="true"><i class="bi bi-chevron-left"></i></span>
+                                    </a>
+                                </li>
+                                <li class="page-item active">
+                                    <span class="page-link" th:text="${userPage.page + 1}">1</span>
+                                </li>
+                                <li class="page-item" th:classappend="${!userPage.hasNext} ? 'disabled' : ''">
+                                    <a class="page-link"
+                                       th:href="${userPage.hasNext} ? @{/admin/users(page=${userPage.page + 1}, size=${userPage.size}, sort=${sort}, search=${search}, status=${selectedStatus}, role=${selectedRole})} : '#'">
+                                        <span aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
-</section>
+</div>
 </body>
 </html>

@@ -107,7 +107,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/", "/error", "/favicon.ico").permitAll();
-                    auth.requestMatchers("/admin/login", "/admin/css/**", "/admin/js/**", "/admin/images/**").permitAll();
+                    auth.requestMatchers(
+                            "/admin/login",
+                            "/admin/assets/**",
+                            "/admin/css/**",
+                            "/admin/js/**",
+                            "/admin/images/**"
+                    ).permitAll();
                     auth.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
                     auth.requestMatchers("/actuator/**").hasRole(SecurityConstants.ROLE_ADMIN);
 
