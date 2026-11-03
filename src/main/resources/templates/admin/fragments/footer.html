@@ -5,11 +5,13 @@
     <div class="footer clearfix mb-0 text-muted">
         <div class="float-start">
             <p><span th:text="${currentYear} ?: '2026'">2026</span> &copy;
-                <span th:text="${appName} ?: 'Enterprise Management System'">Enterprise Management System</span></p>
+                <span th:text="${appName} ?: #{admin.app.defaultName}">Enterprise Management System</span></p>
         </div>
         <div class="float-end">
-            <p>Crafted with <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
-                using <span class="text-primary fw-bold">Spring Boot Base</span> &amp; Mazer UI</p>
+            <p><span th:text="#{admin.footer.craftedWith}">Crafted with</span>
+                <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
+                <span th:text="#{admin.footer.using}">using</span>
+                <span class="text-primary fw-bold">Spring Boot Base</span> &amp; Mazer UI</p>
         </div>
     </div>
 </footer>

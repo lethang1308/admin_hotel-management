@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Roles & RBAC', ~{::#roles-list-page}, ~{})}">
+      th:replace="~{admin/layouts/main :: layout(#{admin.roles.title}, ~{::#roles-list-page}, ~{})}">
 <body>
 <div id="roles-list-page">
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
                 <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3>System Roles (RBAC)</h3>
-                    <p class="text-subtitle text-muted">
+                    <h3 th:text="#{admin.roles.title}">System Roles (RBAC)</h3>
+                    <p class="text-subtitle text-muted" th:text="#{admin.roles.subtitle}">
                         Registered role definitions managed via Flyway schema migrations
                     </p>
                 </div>
                 <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Roles &amp; RBAC</li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin}" th:text="#{admin.nav.dashboard}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page" th:text="#{admin.roles.title}">Roles &amp; RBAC</li>
                         </ol>
                     </nav>
                 </div>
@@ -26,24 +26,26 @@
         <section class="section">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="card-title mb-0">Available Authorization Roles</h4>
-                    <span class="badge bg-light-secondary" th:text="${#lists.size(roles)} + ' roles'">2 roles</span>
+                    <h4 class="card-title mb-0" th:text="#{admin.roles.availableRoles}">Available Authorization Roles</h4>
+                    <span class="badge bg-light-secondary" th:text="#{admin.roles.countBadge(${#lists.size(roles)})}">2 roles</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover table-lg align-middle mb-0">
                             <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Role Code</th>
-                                <th>Display Name</th>
-                                <th>Description</th>
-                                <th>Created (UTC)</th>
+                                <th th:text="#{admin.table.id}">ID</th>
+                                <th th:text="#{admin.roles.code}">Role Code</th>
+                                <th th:text="#{admin.roles.displayName}">Display Name</th>
+                                <th th:text="#{admin.roles.description}">Description</th>
+                                <th th:text="#{admin.table.created}">Created (UTC)</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:if="${#lists.isEmpty(roles)}">
-                                <td colspan="5" class="text-center text-muted py-4">No system roles registered.</td>
+                                <td colspan="5" class="text-center text-muted py-4" th:text="#{admin.roles.noRoles}">
+                                    No system roles registered.
+                                </td>
                             </tr>
                             <tr th:each="role : ${roles}">
                                 <td class="text-muted fw-semibold" th:text="'#' + ${role.id}">#1</td>

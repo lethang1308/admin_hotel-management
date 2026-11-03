@@ -29,6 +29,11 @@ spring:
     encoding: UTF-8
     mode: HTML
 
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+
 server:
   port: ${SERVER_PORT:8080}
   error:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="'Log in - ' + (${appName} ?: 'Admin Portal')">Log in - Admin Portal</title>
+    <title th:text="#{admin.login.pageTitle} + ' - ' + (${appName} ?: #{admin.app.defaultName})">Log in - Admin Portal</title>
 
     <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.svg}" type="image/x-icon">
     <link rel="shortcut icon" th:href="@{/admin/assets/static/images/logo/favicon.png}" type="image/png">
@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app-dark.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/auth.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/iconly.css}">
 </head>
 
 <body>
@@ -19,32 +20,60 @@
     <div class="row h-100">
         <div class="col-lg-5 col-12">
             <div id="auth-left">
-                <div class="auth-logo">
-                    <a th:href="@{/admin}">
-                        <img th:src="@{/admin/assets/static/images/logo/logo.svg}" alt="Logo">
-                    </a>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="auth-logo mb-0">
+                        <a th:href="@{/admin}">
+                            <img th:src="@{/admin/assets/static/images/logo/logo.svg}" alt="Logo">
+                        </a>
+                    </div>
+                    <div class="dropdown">
+                        <a class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1"
+                           href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-translate"></i>
+                            <span class="fw-semibold small" th:text="${currentLang == 'en' ? 'EN' : 'VI'}">VI</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 10rem;">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center justify-content-between"
+                                   th:classappend="${currentLang != 'en'} ? 'active fw-bold' : ''"
+                                   th:href="@{/admin/login(lang='vi')}">
+                                    <span>🇻🇳 Tiếng Việt</span>
+                                    <i class="bi bi-check2" th:if="${currentLang != 'en'}"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center justify-content-between"
+                                   th:classappend="${currentLang == 'en'} ? 'active fw-bold' : ''"
+                                   th:href="@{/admin/login(lang='en')}">
+                                    <span>🇬🇧 English</span>
+                                    <i class="bi bi-check2" th:if="${currentLang == 'en'}"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <h1 class="auth-title">Log in.</h1>
+
+                <h1 class="auth-title" th:text="#{admin.login.title}">Log in.</h1>
                 <p class="auth-subtitle mb-4"
-                   th:text="'Sign in to ' + (${appName} ?: 'Admin Portal') + ' with your Administrator credentials.'">
+                   th:text="#{admin.login.subtitle(${appName} ?: #{admin.app.defaultName})}">
                     Sign in with your Administrator credentials.
                 </p>
 
                 <div th:if="${param.error}" class="alert alert-light-danger color-danger mb-4">
                     <i class="bi bi-exclamation-circle me-2"></i>
-                    Invalid email address or password.
+                    <span th:text="#{admin.login.errorInvalid}">Invalid email address or password.</span>
                 </div>
                 <div th:if="${param.disabled}" class="alert alert-light-warning color-warning mb-4">
                     <i class="bi bi-shield-exclamation me-2"></i>
-                    This account has been deactivated or locked.
+                    <span th:text="#{admin.login.errorDisabled}">This account has been deactivated or locked.</span>
                 </div>
                 <div th:if="${param.accessDenied}" class="alert alert-light-danger color-danger mb-4">
                     <i class="bi bi-slash-circle me-2"></i>
-                    Access denied. Administrator privileges (ADMIN role) are required.
+                    <span th:text="#{admin.login.errorDenied}">Access denied. Administrator privileges (ADMIN role) are required.</span>
                 </div>
                 <div th:if="${param.logout}" class="alert alert-light-success color-success mb-4">
                     <i class="bi bi-check-circle me-2"></i>
-                    You have signed out securely.
+                    <span th:text="#{admin.login.logoutSuccess}">You have signed out securely.</span>
                 </div>
 
                 <form th:action="@{/admin/login}" method="post">
@@ -53,9 +82,9 @@
 
                     <div class="form-group position-relative has-icon-left mb-4">
                         <input type="email" id="email" name="email"
-                               class="form-control form-control-xl"
-                               placeholder="Email address (e.g. admin@example.com)"
-                               required autofocus>
+                                class="form-control form-control-xl"
+                                th:placeholder="#{admin.login.emailPlaceholder}"
+                                required autofocus>
                         <div class="form-control-icon">
                             <i class="bi bi-envelope"></i>
                         </div>
@@ -63,21 +92,22 @@
 
                     <div class="form-group position-relative has-icon-left mb-4">
                         <input type="password" id="password" name="password"
-                               class="form-control form-control-xl"
-                               placeholder="Password"
-                               required>
+                                class="form-control form-control-xl"
+                                th:placeholder="#{admin.login.passwordPlaceholder}"
+                                required>
                         <div class="form-control-icon">
                             <i class="bi bi-shield-lock"></i>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-4">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-4"
+                            th:text="#{admin.login.btn}">
                         Log in
                     </button>
                 </form>
 
                 <div class="text-center mt-5 text-lg fs-6">
-                    <p class="text-gray-600 mb-1">
+                    <p class="text-gray-600 mb-1" th:text="#{admin.login.securityNote}">
                         Protected by Spring Security RBAC &amp; CSRF Session Protection.
                     </p>
                 </div>
@@ -88,5 +118,6 @@
         </div>
     </div>
 </div>
+<script th:src="@{/admin/assets/compiled/js/app.js}"></script>
 </body>
 </html>

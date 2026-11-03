@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('User Management', ~{::#users-list-page}, ~{})}">
+      th:replace="~{admin/layouts/main :: layout(#{admin.users.title}, ~{::#users-list-page}, ~{})}">
 <body>
 <div id="users-list-page">
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
                 <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3>User Management</h3>
-                    <p class="text-subtitle text-muted">
+                    <h3 th:text="#{admin.users.title}">User Management</h3>
+                    <p class="text-subtitle text-muted" th:text="#{admin.users.subtitle}">
                         Search, filter, assign roles, and control user account status
                     </p>
                 </div>
                 <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">User Management</li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin}" th:text="#{admin.nav.dashboard}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page" th:text="#{admin.users.title}">User Management</li>
                         </ol>
                     </nav>
                 </div>
@@ -26,9 +26,9 @@
         <section class="section">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h4 class="card-title mb-0">Registered Accounts</h4>
+                    <h4 class="card-title mb-0" th:text="#{admin.users.registeredAccounts}">Registered Accounts</h4>
                     <a th:href="@{/admin/users/create}" class="btn btn-primary">
-                        <i class="bi bi-person-plus-fill me-1"></i> Create User
+                        <i class="bi bi-person-plus-fill me-1"></i> <span th:text="#{admin.nav.createUser}">Create User</span>
                     </a>
                 </div>
 
@@ -37,7 +37,7 @@
                         <div class="col-12 col-md-4">
                             <div class="form-group position-relative has-icon-left mb-0">
                                 <input type="text" name="search" class="form-control"
-                                       placeholder="Search name or email..."
+                                       th:placeholder="#{admin.users.searchPlaceholder}"
                                        th:value="${search}">
                                 <div class="form-control-icon">
                                     <i class="bi bi-search"></i>
@@ -47,17 +47,17 @@
 
                         <div class="col-6 col-md-3">
                             <select name="status" class="form-select">
-                                <option value="">All Statuses</option>
+                                <option value="" th:text="#{admin.users.allStatuses}">All Statuses</option>
                                 <option th:each="st : ${statuses}"
                                         th:value="${st}"
-                                        th:text="${st}"
+                                        th:text="#{${'admin.status.' + st.name()}}"
                                         th:selected="${selectedStatus == st}"></option>
                             </select>
                         </div>
 
                         <div class="col-6 col-md-2">
                             <select name="role" class="form-select">
-                                <option value="">All Roles</option>
+                                <option value="" th:text="#{admin.users.allRoles}">All Roles</option>
                                 <option th:each="r : ${allRoles}"
                                         th:value="${r.code}"
                                         th:text="${r.code}"
@@ -67,9 +67,9 @@
 
                         <div class="col-12 col-md-3 d-flex gap-2">
                             <button type="submit" class="btn btn-primary flex-grow-1">
-                                <i class="bi bi-funnel me-1"></i> Filter
+                                <i class="bi bi-funnel me-1"></i> <span th:text="#{admin.btn.filter}">Filter</span>
                             </button>
-                            <a th:href="@{/admin/users}" class="btn btn-light-secondary">
+                            <a th:href="@{/admin/users}" class="btn btn-light-secondary" th:text="#{admin.btn.reset}">
                                 Reset
                             </a>
                         </div>
@@ -79,18 +79,18 @@
                         <table class="table table-hover table-lg align-middle mb-0">
                             <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Roles</th>
-                                <th>Status</th>
-                                <th>Created (UTC)</th>
-                                <th class="text-end">Actions</th>
+                                <th th:text="#{admin.table.id}">ID</th>
+                                <th th:text="#{admin.table.fullName}">Full Name</th>
+                                <th th:text="#{admin.table.email}">Email</th>
+                                <th th:text="#{admin.table.roles}">Roles</th>
+                                <th th:text="#{admin.table.status}">Status</th>
+                                <th th:text="#{admin.table.created}">Created (UTC)</th>
+                                <th class="text-end" th:text="#{admin.table.actions}">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             <tr th:if="${#lists.isEmpty(userPage.items)}">
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="7" class="text-center text-muted py-4" th:text="#{admin.users.noUsers}">
                                     No matching users found.
                                 </td>
                             </tr>
@@ -113,26 +113,26 @@
                                 <td>
                                     <span class="badge"
                                           th:classappend="${u.status.name() == 'ACTIVE'} ? 'bg-light-success' : (${u.status.name() == 'LOCKED'} ? 'bg-light-danger' : 'bg-light-secondary')"
-                                          th:text="${u.status}">ACTIVE</span>
+                                          th:text="#{${'admin.status.' + u.status.name()}}">ACTIVE</span>
                                 </td>
                                 <td class="text-muted small" th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
                                 <td>
                                     <div class="d-flex justify-content-end gap-2 flex-wrap">
                                         <a th:href="@{/admin/users/{id}/edit(id=${u.id})}"
                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil-square me-1"></i> Edit
+                                            <i class="bi bi-pencil-square me-1"></i> <span th:text="#{admin.btn.edit}">Edit</span>
                                         </a>
 
                                         <form th:if="${u.status.name() == 'ACTIVE'}"
                                               th:action="@{/admin/users/{id}/status(id=${u.id})}"
                                               method="post"
-                                              data-confirm="Deactivate this user account?"
+                                              th:data-confirm="#{admin.users.deactivateConfirm}"
                                               class="m-0">
                                             <input type="hidden" th:if="${_csrf != null}"
                                                    th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                             <input type="hidden" name="status" value="INACTIVE"/>
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-slash-circle me-1"></i> Deactivate
+                                                <i class="bi bi-slash-circle me-1"></i> <span th:text="#{admin.btn.deactivate}">Deactivate</span>
                                             </button>
                                         </form>
 
@@ -144,7 +144,7 @@
                                                    th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                             <input type="hidden" name="status" value="ACTIVE"/>
                                             <button type="submit" class="btn btn-sm btn-outline-success">
-                                                <i class="bi bi-check-circle me-1"></i> Activate
+                                                <i class="bi bi-check-circle me-1"></i> <span th:text="#{admin.btn.activate}">Activate</span>
                                             </button>
                                         </form>
                                     </div>
@@ -156,10 +156,9 @@
 
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4"
                          th:if="${userPage.totalPages > 0}">
-                        <div class="text-muted small">
-                            Page <strong th:text="${userPage.page + 1}">1</strong> of
-                            <strong th:text="${userPage.totalPages}">1</strong>
-                            (<span th:text="${userPage.totalElements}">0</span> total users)
+                        <div class="text-muted small"
+                             th:text="#{admin.users.pageInfo(${userPage.page + 1}, ${userPage.totalPages}, ${userPage.totalElements})}">
+                            Page 1 of 1 (1 total users)
                         </div>
 
                         <nav aria-label="User list pagination">

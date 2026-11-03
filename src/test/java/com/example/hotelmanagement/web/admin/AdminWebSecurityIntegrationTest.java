@@ -6,7 +6,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.hotelmanagement.modules.auth.repository.RefreshTokenRepository;
@@ -89,7 +88,7 @@ class AdminWebSecurityIntegrationTest {
     }
 
     @Test
-    void shouldAllowAdminFormLoginAndRenderDashboardAndUserList() throws Exception {
+    void shouldAllowAdminFormLoginAndRenderDashboardAndUserListInDefaultVietnameseAndEnglish() throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/admin/login")
                         .with(csrf())
                         .param("email", "portal.admin@example.com")
@@ -100,24 +99,47 @@ class AdminWebSecurityIntegrationTest {
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
+        // 1. Verify Default Locale is Vietnamese
         mockMvc.perform(get("/admin").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("System Overview")));
+                .andExpect(content().string(Matchers.containsString("Tổng quan hệ thống")))
+                .andExpect(content().string(Matchers.containsString("Bảng điều khiển")))
+                .andExpect(content().string(Matchers.containsString("lang=vi")))
+                .andExpect(content().string(Matchers.containsString("lang=en")));
 
         mockMvc.perform(get("/admin/users").session(session))
                 .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Quản lý người dùng")))
                 .andExpect(content().string(Matchers.containsString("portal.admin@example.com")));
 
         mockMvc.perform(get("/admin/users/create").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("Create User Account")));
+                .andExpect(content().string(Matchers.containsString("Tạo tài khoản mới")));
 
         User adminUser = userRepository.findByEmailIgnoreCase("portal.admin@example.com").orElseThrow();
         mockMvc.perform(get("/admin/users/" + adminUser.getId() + "/edit").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("Profile &amp; Role Assignment")));
+                .andExpect(content().string(Matchers.containsString("Hồ sơ &amp; Phân quyền vai trò")));
 
         mockMvc.perform(get("/admin/roles").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Vai trò hệ thống (RBAC)")));
+
+        // 2. Verify Switching to English (?lang=en)
+        mockMvc.perform(get("/admin?lang=en").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("System Overview")))
+                .andExpect(content().string(Matchers.containsString("Dashboard")));
+
+        mockMvc.perform(get("/admin/users?lang=en").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("User Management")));
+
+        mockMvc.perform(get("/admin/users/create?lang=en").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Create User Account")));
+
+        mockMvc.perform(get("/admin/roles?lang=en").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("System Roles (RBAC)")));
     }
@@ -126,7 +148,12 @@ class AdminWebSecurityIntegrationTest {
     void shouldServeMazerLoginPageAndStaticAssetsWithoutAuthentication() throws Exception {
         mockMvc.perform(get("/admin/login"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("auth-left")));
+                .andExpect(content().string(Matchers.containsString("auth-left")))
+                .andExpect(content().string(Matchers.containsString("Đăng nhập")));
+
+        mockMvc.perform(get("/admin/login?lang=en"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(Matchers.containsString("Log in")));
 
         mockMvc.perform(get("/admin/assets/compiled/css/app.css"))
                 .andExpect(status().isOk());

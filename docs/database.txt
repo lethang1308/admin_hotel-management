@@ -1,0 +1,1200 @@
+// QUẢN LÝ KHÁCH SẠN — thiết kế đầy đủ theo chức năng Admin / Receptionist / User.
+// MySQL >= 8.0.16; tiền VND dùng DECIMAL; datetime lưu UTC, ngày đêm phòng theo Asia/Ho_Chi_Minh.
+// Đây là thiết kế đích, KHÔNG phải migration thay thế V1 của backend đang có.
+// Các ràng buộc liên bảng và thuật toán khóa giao dịch được giải thích trong README.vi.md.
+
+Project hotel_management {
+  database_type: 'MySQL'
+  Note: '''Quản lý MỘT khách sạn. Đầy đủ tài khoản/RBAC, phòng, giá động, đặt phòng nhiều phòng,
+  xếp/đổi phòng, check-in/out, dịch vụ, hóa đơn, cọc/thanh toán/hoàn tiền, voucher,
+  bảo trì/dọn phòng, thông báo, đánh giá, hỗ trợ và dữ liệu báo cáo.
+  Khoảng lưu trú [check_in_date, check_out_date), ngày trả không tính đêm.
+  UNIQUE room_night_claims(room_id, stay_date) + khóa room_type_inventory để chống bán trùng.
+  Các bảng nghiệp vụ giữ lịch sử, không xóa cứng. Xem README.vi.md để triển khai transaction.'''
+}
+
+// ── 01. TÀI KHOẢN, PHÂN QUYỀN, HỒ SƠ ──────────────────────────────────────
+Table users {
+  id bigint [pk, increment]
+  full_name varchar(120) [not null]
+  email varchar(150) [not null, unique]
+  phone varchar(20) [unique, note: 'Chuẩn hóa E.164; cho NULL nếu tài khoản cũ chưa có số. Đăng ký mới kiểm tra bắt buộc ở API.']
+  password_hash varchar(255) [not null]
+  avatar_url varchar(500)
+  status varchar(30) [not null, default: 'ACTIVE', note: 'ACTIVE / LOCKED / DISABLED']
+  email_verified_at datetime(6)
+  last_login_at datetime(6)
+  locked_until datetime(6)
+  password_changed_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { status
+    created_at
+    full_name
+  }
+  checks { `status IN ('ACTIVE','LOCKED','DISABLED')` [name: 'ck_user_status'] }
+  Note: 'Giữ tên bảng/cột xác thực gốc trong V1. Bổ sung cột mới bằng migration sau; không chạy lại CREATE lên database cũ.'
+}
+
+Table roles {
+  id bigint [pk, increment]
+  code varchar(50) [not null, unique, note: 'Seed ADMIN, RECEPTIONIST, USER']
+  name varchar(100) [not null]
+  description varchar(255)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+}
+
+Table permissions {
+  id bigint [pk, increment]
+  code varchar(100) [not null, unique, note: 'VD booking.confirm, booking.cancel.any, booking.cancel.own, payment.refund, report.revenue']
+  name varchar(150) [not null]
+  description varchar(500)
+}
+
+Table user_roles {
+  user_id bigint [not null, ref: > users.id]
+  role_id bigint [not null, ref: > roles.id]
+  indexes { (user_id, role_id) [pk]
+    role_id
+  }
+}
+
+Table role_permissions {
+  role_id bigint [not null, ref: > roles.id]
+  permission_id bigint [not null, ref: > permissions.id]
+  indexes { (role_id, permission_id) [pk]
+    permission_id
+  }
+  Note: 'Quyền API kết hợp kiểm tra chủ sở hữu booking ở service; RBAC đơn thuần không bảo vệ truy cập đơn người khác.'
+}
+
+Table refresh_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  token_hash varchar(64) [not null, unique]
+  family_id varchar(64) [not null]
+  expires_at datetime(6) [not null]
+  revoked_at datetime(6)
+  replaced_by_token_hash varchar(64)
+  ip_address varchar(64)
+  user_agent varchar(255)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { user_id
+    family_id
+    expires_at
+  }
+  Note: 'Khớp cấu trúc refresh_tokens trong V1; thu hồi khi logout/khóa tài khoản/đổi mật khẩu.'
+}
+
+Table account_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  purpose varchar(30) [not null, note: 'PASSWORD_RESET / EMAIL_VERIFY']
+  token_hash char(64) [not null, unique]
+  expires_at datetime(6) [not null]
+  used_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (user_id, purpose)
+    expires_at
+  }
+  checks { `purpose IN ('PASSWORD_RESET','EMAIL_VERIFY')` [name: 'ck_account_token_purpose'] }
+  Note: 'Chỉ lưu hash, token dùng một lần; consumed bằng cập nhật có điều kiện trong transaction.'
+}
+
+Table employees {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: > users.id]
+  employee_code varchar(30) [not null, unique]
+  position varchar(100)
+  hired_on date
+  ended_on date
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  checks { `ended_on IS NULL OR hired_on IS NULL OR ended_on >= hired_on` [name: 'ck_employee_dates'] }
+}
+
+Table customers {
+  id bigint [pk, increment]
+  user_id bigint [unique, ref: > users.id, note: 'NULL cho khách walk-in chưa đăng ký tài khoản.']
+  customer_code varchar(30) [not null, unique]
+  full_name varchar(150) [not null]
+  email varchar(150)
+  phone varchar(20)
+  date_of_birth date
+  nationality_code char(2)
+  address varchar(500)
+  notes text
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { phone
+    email
+    full_name
+    created_at
+  }
+  Note: 'Hồ sơ khách dùng chung cho nhiều booking; có thể vừa là nhân viên vừa là khách. Không ép email/số điện thoại khách walk-in là duy nhất.'
+}
+
+Table audit_logs {
+  id bigint [pk, increment]
+  actor_user_id bigint [ref: > users.id, note: 'NULL cho tác vụ tự động']
+  action varchar(100) [not null]
+  entity_type varchar(80) [not null]
+  entity_id varchar(80) [not null, note: 'Tham chiếu đa hình để truy vết, không phải FK.']
+  before_data json
+  after_data json
+  reason varchar(1000)
+  request_id varchar(100)
+  ip_address varchar(64)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (entity_type, entity_id, created_at)
+    (actor_user_id, created_at)
+    created_at
+  }
+  Note: 'Append-only. Ghi sửa giá/hủy/hoàn tiền/đổi trạng thái; loại password, token và giấy tờ định danh khỏi JSON nhật ký.'
+}
+
+// ── 02. KHÁCH SẠN, PHÒNG, VẬN HÀNH ────────────────────────────────────────
+Table hotel_settings {
+  id bigint [pk, note: 'Một khách sạn, duy nhất dòng id=1.']
+  name varchar(200) [not null]
+  description text
+  address varchar(500) [not null]
+  hotline varchar(30)
+  email varchar(150)
+  logo_url varchar(500)
+  timezone varchar(60) [not null, default: 'Asia/Ho_Chi_Minh']
+  currency char(3) [not null, default: 'VND']
+  standard_check_in time [not null, default: '14:00:00']
+  standard_check_out time [not null, default: '12:00:00']
+  booking_hold_minutes int [not null, default: 15]
+  default_tax_percent decimal(5,2) [not null, default: 0]
+  default_deposit_policy_id bigint [not null, ref: > deposit_policies.id]
+  default_cancellation_policy_id bigint [not null, ref: > cancellation_policies.id]
+  updated_by bigint [ref: > users.id]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  checks { `id = 1` [name: 'ck_single_hotel']
+    `booking_hold_minutes > 0 AND default_tax_percent BETWEEN 0 AND 100` [name: 'ck_hotel_values']
+  }
+}
+
+Table system_settings {
+  setting_key varchar(100) [pk]
+  setting_value json [not null]
+  description varchar(500)
+  updated_by bigint [ref: > users.id]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  Note: 'Cấu hình mở rộng không chứa mật khẩu/API key. Chính sách nghiệp vụ dùng bảng riêng để có FK và phiên bản.'
+}
+
+Table floors {
+  id bigint [pk, increment]
+  code varchar(30) [not null, unique]
+  name varchar(100) [not null]
+  area_name varchar(100) [not null, note: 'VD Khu A, Khu B']
+  floor_number int [not null]
+  sort_order int [not null, default: 0]
+  is_active boolean [not null, default: true]
+}
+
+Table room_types {
+  id bigint [pk, increment]
+  code varchar(30) [not null, unique]
+  name varchar(100) [not null]
+  description text
+  base_price decimal(15,2) [not null]
+  area_sqm decimal(8,2)
+  max_adults int [not null]
+  max_children int [not null, default: 0]
+  max_occupancy int [not null, note: 'Tổng khách tối đa, kiểm tra cả người lớn + trẻ em.']
+  bed_description varchar(200)
+  is_featured boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  checks { `base_price >= 0 AND max_adults > 0 AND max_children >= 0 AND max_occupancy >= max_adults` [name: 'ck_room_type_values']
+    `area_sqm IS NULL OR area_sqm > 0` [name: 'ck_room_area']
+  }
+}
+
+Table room_type_images {
+  id bigint [pk, increment]
+  room_type_id bigint [not null, ref: > room_types.id]
+  image_url varchar(500) [not null]
+  alt_text varchar(200)
+  sort_order int [not null, default: 0]
+  indexes { (room_type_id, sort_order) [unique] }
+  Note: 'Ảnh bìa là ảnh có sort_order nhỏ nhất; không cần cờ is_cover có thể bị trùng.'
+}
+
+Table amenities {
+  id bigint [pk, increment]
+  code varchar(50) [not null, unique]
+  name varchar(100) [not null]
+  icon varchar(100)
+  is_active boolean [not null, default: true]
+}
+
+Table room_type_amenities {
+  room_type_id bigint [not null, ref: > room_types.id]
+  amenity_id bigint [not null, ref: > amenities.id]
+  indexes { (room_type_id, amenity_id) [pk]
+    amenity_id
+  }
+}
+
+Table rooms {
+  id bigint [pk, increment]
+  room_number varchar(20) [not null, unique]
+  room_type_id bigint [not null, ref: > room_types.id]
+  floor_id bigint [not null, ref: > floors.id]
+  status varchar(30) [not null, default: 'AVAILABLE']
+  sell_from date [not null, note: 'Ngày đầu tiên được kinh doanh']
+  sell_until date [note: 'Ngày ngừng kinh doanh, exclusive; dùng cho mẫu số báo cáo lịch sử.']
+  notes text
+  version int [not null, default: 0]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_type_id, status)
+    floor_id
+  }
+  checks { `status IN ('AVAILABLE','OCCUPIED','DIRTY','CLEANING','MAINTENANCE','INACTIVE')` [name: 'ck_room_status']
+    `sell_until IS NULL OR sell_until > sell_from` [name: 'ck_room_sell_dates']
+  }
+  Note: 'Trạng thái hiện tại KHÔNG thay lịch đặt. Không đổi loại phòng khi đã có lịch tương lai; muốn đổi phải chuyển các đặt chỗ/tồn kho trong transaction.'
+}
+
+Table room_status_history {
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id]
+  old_status varchar(30)
+  new_status varchar(30) [not null]
+  changed_by bigint [ref: > users.id]
+  reason varchar(500)
+  changed_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, changed_at) }
+}
+
+Table work_sessions {
+  id bigint [pk, increment]
+  employee_id bigint [not null, ref: > employees.id]
+  opened_at datetime(6) [not null]
+  closed_at datetime(6)
+  opening_cash decimal(15,2) [not null, default: 0]
+  counted_closing_cash decimal(15,2)
+  notes text
+  indexes { (employee_id, opened_at) }
+  checks { `closed_at IS NULL OR closed_at > opened_at` [name: 'ck_work_session_dates']
+    `opening_cash >= 0 AND (counted_closing_cash IS NULL OR counted_closing_cash >= 0)` [name: 'ck_work_session_cash']
+  }
+  Note: 'Tổng quan ca lễ tân và đối soát tiền mặt. Khóa employee khi mở ca để chỉ có một ca chưa đóng.'
+}
+
+Table maintenance_requests {
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id]
+  reported_by bigint [not null, ref: > users.id]
+  assigned_employee_id bigint [ref: > employees.id]
+  title varchar(200) [not null]
+  description text
+  priority varchar(20) [not null, default: 'NORMAL']
+  status varchar(30) [not null, default: 'OPEN']
+  started_at datetime(6)
+  resolved_at datetime(6)
+  resolution text
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, status)
+    (status, created_at)
+    (id, room_id) [unique]
+  }
+  checks { `status IN ('OPEN','IN_PROGRESS','RESOLVED','CANCELLED')` [name: 'ck_maintenance_status']
+    `priority IN ('LOW','NORMAL','HIGH','URGENT')` [name: 'ck_maintenance_priority']
+    `resolved_at IS NULL OR started_at IS NULL OR resolved_at >= started_at` [name: 'ck_maintenance_times']
+  }
+}
+
+Table room_blocks {
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id]
+  maintenance_request_id bigint
+  block_type varchar(30) [not null, note: 'MAINTENANCE / OUT_OF_SERVICE']
+  from_date date [not null]
+  to_date date [not null, note: 'Exclusive; chặn bán theo đêm.']
+  status varchar(20) [not null, default: 'ACTIVE']
+  reason varchar(500) [not null]
+  created_by bigint [not null, ref: > users.id]
+  released_by bigint [ref: > users.id]
+  released_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, from_date, to_date)
+    (id, room_id) [unique]
+  }
+  checks { `to_date > from_date` [name: 'ck_room_block_dates']
+    `block_type IN ('MAINTENANCE','OUT_OF_SERVICE') AND status IN ('ACTIVE','RELEASED','CANCELLED')` [name: 'ck_room_block_types']
+  }
+  Note: 'Bảo trì có lịch phải tạo claims và giảm sellable_rooms theo từng đêm cùng giao dịch; không chỉ đổi rooms.status.'
+}
+Ref: room_blocks.(maintenance_request_id, room_id) > maintenance_requests.(id, room_id)
+
+Table housekeeping_tasks {
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id]
+  assigned_employee_id bigint [ref: > employees.id]
+  created_by bigint [ref: > users.id]
+  status varchar(30) [not null, default: 'PENDING']
+  notes text
+  started_at datetime(6)
+  completed_at datetime(6)
+  verified_by bigint [ref: > users.id]
+  verified_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, status)
+    (status, created_at)
+  }
+  checks { `status IN ('PENDING','IN_PROGRESS','COMPLETED','VERIFIED','CANCELLED')` [name: 'ck_housekeeping_status']
+    `completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at` [name: 'ck_housekeeping_times']
+  }
+  Note: 'Check-out tạo PENDING/DIRTY; bắt đầu dọn -> CLEANING; lễ tân xác nhận VERIFIED -> AVAILABLE nếu không có block.'
+}
+
+// ── 03. CHÍNH SÁCH, GIÁ ĐỘNG, VOUCHER ──────────────────────────────────────
+Table deposit_policies {
+  id bigint [pk, increment]
+  code varchar(30) [not null]
+  version int [not null, default: 1]
+  name varchar(150) [not null]
+  amount_type varchar(20) [not null, note: 'NONE / PERCENT / FIXED']
+  amount_value decimal(15,2) [not null, default: 0]
+  payment_due_minutes int [not null, default: 15]
+  is_active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (code, version) [unique] }
+  checks { `amount_type IN ('NONE','PERCENT','FIXED') AND amount_value >= 0 AND payment_due_minutes > 0` [name: 'ck_deposit_values']
+    `amount_type <> 'PERCENT' OR amount_value <= 100` [name: 'ck_deposit_percent']
+    `amount_type <> 'NONE' OR amount_value = 0` [name: 'ck_deposit_none']
+  }
+  Note: 'Phiên bản đã được booking tham chiếu thì bất biến; thay chính sách bằng phiên bản mới.'
+}
+
+Table cancellation_policies {
+  id bigint [pk, increment]
+  code varchar(30) [not null]
+  version int [not null, default: 1]
+  name varchar(150) [not null]
+  description text
+  customer_can_cancel boolean [not null, default: true]
+  customer_cancel_deadline_hours int [not null, default: 0]
+  no_show_fee_type varchar(20) [not null, default: 'PERCENT']
+  no_show_fee_value decimal(15,2) [not null, default: 100]
+  is_active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (code, version) [unique] }
+  checks { `customer_cancel_deadline_hours >= 0 AND no_show_fee_value >= 0` [name: 'ck_cancel_policy_values']
+    `no_show_fee_type IN ('NONE','PERCENT','FIXED','FIRST_NIGHT')` [name: 'ck_no_show_fee_type']
+    `no_show_fee_type <> 'PERCENT' OR no_show_fee_value <= 100` [name: 'ck_no_show_percent']
+  }
+  Note: 'Đổi chính sách tạo version mới. Mốc tính là giờ check-in dự kiến của từng booking_rooms.'
+}
+
+Table cancellation_policy_rules {
+  id bigint [pk, increment]
+  cancellation_policy_id bigint [not null, ref: > cancellation_policies.id]
+  min_hours_before_checkin int [not null, note: 'VD 48 -> miễn phí từ 48h; 0 -> phí khi dưới 48h. Chọn ngưỡng lớn nhất thỏa điều kiện.']
+  fee_type varchar(20) [not null]
+  fee_value decimal(15,2) [not null, default: 0]
+  indexes { (cancellation_policy_id, min_hours_before_checkin) [unique] }
+  checks { `min_hours_before_checkin >= 0 AND fee_value >= 0 AND fee_type IN ('NONE','PERCENT','FIXED','FIRST_NIGHT')` [name: 'ck_cancel_rule_values']
+    `fee_type <> 'PERCENT' OR fee_value <= 100` [name: 'ck_cancel_rule_percent']
+    `fee_type <> 'NONE' OR fee_value = 0` [name: 'ck_cancel_rule_none']
+  }
+}
+
+Table surcharge_policies {
+  id bigint [pk, increment]
+  code varchar(30) [not null]
+  version int [not null, default: 1]
+  name varchar(150) [not null]
+  kind varchar(30) [not null, note: 'EARLY_CHECKIN / LATE_CHECKOUT / EXTRA_GUEST / EXTRA_BED']
+  room_type_id bigint [ref: > room_types.id, note: 'NULL áp dụng mọi loại phòng']
+  from_minutes int [note: 'Số phút nhận sớm/trả muộn, inclusive']
+  to_minutes int [note: 'Exclusive; NULL không giới hạn']
+  amount_type varchar(20) [not null, note: 'FIXED / PERCENT_NIGHT / PER_HOUR']
+  amount_value decimal(15,2) [not null]
+  priority int [not null, default: 0]
+  is_active boolean [not null, default: true]
+  indexes { (code, version) [unique]
+    (kind, room_type_id, is_active)
+  }
+  checks { `kind IN ('EARLY_CHECKIN','LATE_CHECKOUT','EXTRA_GUEST','EXTRA_BED') AND amount_type IN ('FIXED','PERCENT_NIGHT','PER_HOUR') AND amount_value >= 0` [name: 'ck_surcharge_values']
+    `from_minutes IS NULL OR from_minutes >= 0` [name: 'ck_surcharge_min']
+    `to_minutes IS NULL OR (from_minutes IS NOT NULL AND to_minutes > from_minutes)` [name: 'ck_surcharge_range']
+  }
+  Note: 'Lưu phiên bản đã dùng vào booking_charges; không sửa lịch sử. PER_HOUR làm tròn lên số giờ tại service.'
+}
+
+Table rate_rules {
+  id bigint [pk, increment]
+  code varchar(40) [not null]
+  version int [not null, default: 1]
+  name varchar(150) [not null]
+  kind varchar(30) [not null, note: 'NIGHT_OVERRIDE / LENGTH_DISCOUNT']
+  start_date date [not null]
+  end_date date [not null, note: 'Exclusive']
+  weekday_mask int [not null, default: 127, note: 'Thứ 2=1, T3=2, ..., T7=32, CN=64; cuối tuần=96.']
+  min_nights int [not null, default: 1]
+  max_nights int
+  value_type varchar(20) [not null, note: 'NIGHT_OVERRIDE dùng FIXED; LENGTH_DISCOUNT dùng PERCENT hoặc FIXED mỗi đêm.']
+  value decimal(15,2) [not null]
+  priority int [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (code, version) [unique]
+    (kind, is_active, start_date, end_date)
+  }
+  checks { `end_date > start_date AND min_nights > 0 AND (max_nights IS NULL OR max_nights >= min_nights)` [name: 'ck_rate_dates_nights']
+    `weekday_mask BETWEEN 1 AND 127 AND value >= 0` [name: 'ck_rate_values']
+    `(kind = 'NIGHT_OVERRIDE' AND value_type = 'FIXED') OR (kind = 'LENGTH_DISCOUNT' AND value_type IN ('PERCENT','FIXED'))` [name: 'ck_rate_kind']
+    `value_type <> 'PERCENT' OR value <= 100` [name: 'ck_rate_percent']
+  }
+  Note: 'Mỗi loại phòng phải có liên kết rate_rule_room_types. Mỗi đêm chọn tối đa 1 override và 1 giảm dài ngày, ưu tiên priority DESC, id DESC; snapshot vào booking_room_nights.'
+}
+
+Table rate_rule_room_types {
+  rate_rule_id bigint [not null, ref: > rate_rules.id]
+  room_type_id bigint [not null, ref: > room_types.id]
+  indexes { (rate_rule_id, room_type_id) [pk]
+    room_type_id
+  }
+}
+
+Table vouchers {
+  id bigint [pk, increment]
+  code varchar(50) [not null, unique]
+  name varchar(150) [not null]
+  description text
+  discount_type varchar(20) [not null]
+  discount_value decimal(15,2) [not null]
+  max_discount_amount decimal(15,2)
+  min_room_subtotal decimal(15,2) [not null, default: 0]
+  starts_at datetime(6) [not null]
+  expires_at datetime(6) [not null]
+  stay_from date
+  stay_until date
+  max_uses int
+  max_uses_per_customer int [not null, default: 1]
+  combinable_with_length_discount boolean [not null, default: true]
+  is_active boolean [not null, default: true]
+  created_by bigint [not null, ref: > users.id]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  checks { `expires_at > starts_at AND discount_value > 0 AND min_room_subtotal >= 0` [name: 'ck_voucher_values']
+    `discount_type IN ('PERCENT','FIXED') AND (discount_type <> 'PERCENT' OR discount_value <= 100)` [name: 'ck_voucher_type']
+    `(max_uses IS NULL OR max_uses > 0) AND max_uses_per_customer > 0 AND (max_discount_amount IS NULL OR max_discount_amount > 0)` [name: 'ck_voucher_limits']
+    `stay_until IS NULL OR (stay_from IS NOT NULL AND stay_until > stay_from)` [name: 'ck_voucher_stay_dates']
+  }
+  Note: 'Giảm tiền PHÒNG sau giảm dài ngày, trước thuế; không giảm dịch vụ. Không sửa điều kiện voucher đã được dùng; tạo mã mới. Lượt dùng đếm RESERVED+REDEEMED dưới khóa dòng voucher.'
+}
+
+Table voucher_room_types {
+  voucher_id bigint [not null, ref: > vouchers.id]
+  room_type_id bigint [not null, ref: > room_types.id]
+  indexes { (voucher_id, room_type_id) [pk]
+    room_type_id
+  }
+  Note: 'Không có dòng giới hạn nghĩa là áp dụng mọi loại phòng đang bán.'
+}
+
+// ── 04. ĐẶT PHÒNG, GIÁ TỪNG ĐÊM, GIỮ CHỖ, XẾP PHÒNG ────────────────────
+Table bookings {
+  id bigint [pk, increment]
+  booking_code varchar(30) [not null, unique]
+  customer_id bigint [not null, ref: > customers.id]
+  created_by bigint [ref: > users.id, note: 'NULL cho khách vãng lai đặt online nếu cho phép.']
+  source varchar(20) [not null, note: 'ONLINE / WALK_IN / PHONE']
+  status varchar(30) [not null, default: 'PENDING']
+  contact_name varchar(150) [not null]
+  contact_email varchar(150)
+  contact_phone varchar(20) [not null]
+  special_requests text
+  internal_notes text
+  deposit_policy_id bigint [not null, ref: > deposit_policies.id]
+  cancellation_policy_id bigint [not null, ref: > cancellation_policies.id]
+  policy_snapshot json [not null, note: 'Bản điều khoản khách chấp thuận gồm cọc, hủy, giờ nhận/trả; không phụ thuộc cấu hình hiện tại.']
+  currency char(3) [not null, default: 'VND']
+  deposit_required_amount decimal(15,2) [not null, default: 0]
+  deposit_due_at datetime(6)
+  hold_expires_at datetime(6)
+  confirmed_by bigint [ref: > users.id]
+  confirmed_at datetime(6)
+  rejected_by bigint [ref: > users.id]
+  rejected_at datetime(6)
+  rejection_reason varchar(1000)
+  rebooked_from_id bigint [ref: > bookings.id]
+  version int [not null, default: 0]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (customer_id, created_at)
+    (status, created_at)
+    (status, hold_expires_at)
+    contact_phone
+    (id, customer_id) [unique]
+  }
+  checks { `status IN ('PENDING','CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED','REJECTED','NO_SHOW')` [name: 'ck_booking_status']
+    `source IN ('ONLINE','WALK_IN','PHONE') AND deposit_required_amount >= 0` [name: 'ck_booking_values']
+  }
+  Note: 'Đơn tổng; ngày và số khách nằm tại booking_rooms để từng phòng nhận/trả riêng. CHECKED_IN khi ít nhất 1 phòng đang ở; CHECKED_OUT khi mọi phòng đã kết thúc và có phòng đã lưu trú. Số tiền đọc từ ledger, không lưu thêm total dễ lệch.'
+}
+
+Table booking_rooms {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  line_number int [not null]
+  room_type_id bigint [not null, ref: > room_types.id]
+  room_type_name_snapshot varchar(100) [not null]
+  check_in_date date [not null]
+  check_out_date date [not null]
+  expected_check_in_at datetime(6) [not null]
+  expected_check_out_at datetime(6) [not null]
+  adults int [not null]
+  children int [not null, default: 0]
+  status varchar(30) [not null, default: 'PENDING']
+  actual_check_in_at datetime(6)
+  actual_check_out_at datetime(6)
+  checked_in_by bigint [ref: > users.id]
+  checked_out_by bigint [ref: > users.id]
+  special_requests text
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, line_number) [unique]
+    (id, booking_id) [unique]
+    (status, check_in_date)
+    (status, check_out_date)
+    (room_type_id, check_in_date, check_out_date)
+  }
+  checks { `check_out_date > check_in_date AND expected_check_out_at > expected_check_in_at` [name: 'ck_booking_room_dates']
+    `adults > 0 AND children >= 0 AND line_number > 0` [name: 'ck_booking_room_guests']
+    `status IN ('PENDING','CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED','REJECTED','NO_SHOW')` [name: 'ck_booking_room_status']
+    `actual_check_out_at IS NULL OR (actual_check_in_at IS NOT NULL AND actual_check_out_at >= actual_check_in_at)` [name: 'ck_booking_actual_times']
+  }
+  Note: 'MỖI dòng là MỘT phòng được đặt, không dùng quantity. Đặt 3 phòng tạo 3 dòng, cho phép xếp/đổi/hủy/nhận/trả riêng. Kiểm tra sức chứa từ room_types trong transaction.'
+}
+
+Table room_type_inventory {
+  room_type_id bigint [not null, ref: > room_types.id]
+  stay_date date [not null]
+  total_rooms int [not null]
+  blocked_rooms int [not null, default: 0]
+  sellable_rooms int [not null, note: 'total_rooms - blocked_rooms; khóa và cập nhật đồng bộ.']
+  held_rooms int [not null, default: 0]
+  reserved_rooms int [not null, default: 0]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_type_id, stay_date) [pk]
+    stay_date
+  }
+  checks { `total_rooms >= 0 AND blocked_rooms >= 0 AND blocked_rooms <= total_rooms AND sellable_rooms = total_rooms - blocked_rooms` [name: 'ck_inventory_capacity']
+    `held_rooms >= 0 AND reserved_rooms >= 0 AND held_rooms + reserved_rooms <= sellable_rooms` [name: 'ck_inventory_available']
+  }
+  Note: 'Hàng khóa chống oversell khi chưa gán phòng vật lý. Tạo sẵn ngày trong khoảng mở bán. held=PENDING chưa hết hạn đã xử lý; reserved=CONFIRMED/CHECKED_IN và lịch sử đêm đã bán. Không giảm các đêm đã sử dụng khi checkout. Đây là số liệu dẫn xuất cần đối soát với nights/claims.'
+}
+
+Table booking_room_nights {
+  id bigint [pk, increment]
+  booking_room_id bigint [not null, ref: > booking_rooms.id]
+  stay_date date [not null]
+  inventory_room_type_id bigint [not null, note: 'Loại phòng bị trừ tồn kho đêm này, cho phép nâng hạng/đổi loại từ một ngày nhất định.']
+  rate_rule_id bigint [ref: > rate_rules.id]
+  length_discount_rule_id bigint [ref: > rate_rules.id]
+  base_price_snapshot decimal(15,2) [not null]
+  nightly_rate decimal(15,2) [not null, note: 'Giá sau override, trước giảm dài ngày/voucher']
+  length_discount_amount decimal(15,2) [not null, default: 0]
+  voucher_discount_amount decimal(15,2) [not null, default: 0]
+  net_room_amount decimal(15,2) [not null, note: 'nightly_rate - length_discount_amount - voucher_discount_amount; trước thuế.']
+  inventory_state varchar(20) [not null, default: 'HELD']
+  stay_status varchar(20) [not null, default: 'PLANNED']
+  recognized_at datetime(6) [note: 'Thời điểm ghi nhận doanh thu đêm thực tế đã lưu trú.']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_room_id, stay_date) [unique]
+    (inventory_room_type_id, stay_date)
+    (stay_date, stay_status)
+    (id, booking_room_id) [unique]
+  }
+  checks { `base_price_snapshot >= 0 AND nightly_rate >= 0 AND length_discount_amount >= 0 AND voucher_discount_amount >= 0 AND net_room_amount >= 0` [name: 'ck_night_money_nonnegative']
+    `net_room_amount = nightly_rate - length_discount_amount - voucher_discount_amount` [name: 'ck_night_money_sum']
+    `inventory_state IN ('HELD','RESERVED','RELEASED') AND stay_status IN ('PLANNED','STAYED','CANCELLED','NO_SHOW')` [name: 'ck_night_states']
+  }
+  Note: 'Snapshot bất biến của đêm đã dùng/đã xuất hóa đơn. Đêm bị rút ngắn giữ lại với RELEASED/CANCELLED. Đổi giá tương lai ghi audit; gia hạn tạo thêm nights. Tổng giảm voucher phân bổ theo tỷ trọng và xử lý phần lẻ ở đêm cuối.'
+}
+Ref: booking_room_nights.(inventory_room_type_id, stay_date) > room_type_inventory.(room_type_id, stay_date)
+
+Table room_allocations {
+  id bigint [pk, increment]
+  booking_room_id bigint [not null, ref: > booking_rooms.id]
+  room_id bigint [not null, ref: > rooms.id]
+  from_date date [not null]
+  to_date date [not null]
+  occupied_from_at datetime(6)
+  occupied_until_at datetime(6)
+  status varchar(20) [not null, default: 'SCHEDULED']
+  assigned_by bigint [ref: > users.id, note: 'NULL khi hệ thống tự xếp phòng dự kiến.']
+  ended_by bigint [ref: > users.id]
+  reason varchar(500)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, from_date, to_date)
+    (booking_room_id, from_date)
+    (id, room_id) [unique]
+    (id, booking_room_id) [unique]
+  }
+  checks { `to_date > from_date` [name: 'ck_allocation_dates']
+    `status IN ('SCHEDULED','OCCUPIED','COMPLETED','RELEASED')` [name: 'ck_allocation_status']
+    `occupied_until_at IS NULL OR (occupied_from_at IS NOT NULL AND occupied_until_at >= occupied_from_at)` [name: 'ck_allocation_actual_times']
+  }
+  Note: 'Một lần gán/chuyển phòng = một đoạn lịch sử. Đổi giữa ngày giữ giờ thực tế; claims tương lai chuyển sang phòng mới; phòng cũ DIRTY. Không xóa đoạn đã ở. Kiểm tra giao nhau giờ thực tế dưới khóa rooms.'
+}
+
+Table room_night_claims {
+  room_id bigint [not null, ref: > rooms.id]
+  stay_date date [not null]
+  room_allocation_id bigint
+  room_block_id bigint
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (room_id, stay_date) [pk]
+    room_allocation_id
+    room_block_id
+  }
+  checks { `(room_allocation_id IS NOT NULL AND room_block_id IS NULL) OR (room_allocation_id IS NULL AND room_block_id IS NOT NULL)` [name: 'ck_claim_one_owner'] }
+  Note: 'Chỉ claim đang có hiệu lực và lịch sử đã dùng. PK cấm 2 booking hoặc booking/bảo trì chiếm cùng phòng cùng đêm. Hủy/đổi chỉ gỡ claim tương lai trong transaction, lịch sử vẫn còn ở allocations/blocks/audit. Không thay thế kiểm tra OCCUPIED/DIRTY và giao nhau giờ check-in sớm/trả muộn.'
+}
+Ref: room_night_claims.(room_allocation_id, room_id) > room_allocations.(id, room_id)
+Ref: room_night_claims.(room_block_id, room_id) > room_blocks.(id, room_id)
+
+Table booking_guests {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  customer_id bigint [ref: > customers.id]
+  full_name varchar(150) [not null]
+  date_of_birth date
+  guest_type varchar(20) [not null, default: 'ADULT']
+  nationality_code char(2)
+  phone varchar(20)
+  document_type varchar(30)
+  document_number_encrypted text [note: 'Mã hóa ở ứng dụng; không dùng số giấy tờ làm mã công khai.']
+  document_number_hash char(64) [note: 'Hash có khóa/HMAC để tìm kiếm chính xác khi cần.']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, full_name)
+    (id, booking_id) [unique]
+    document_number_hash
+  }
+  checks { `guest_type IN ('ADULT','CHILD')` [name: 'ck_guest_type'] }
+  Note: 'Thông tin người lưu trú được chụp tại chuyến đi, có cả người đặt và người đi cùng; không bắt buộc có tài khoản.'
+}
+
+Table stay_guests {
+  id bigint [pk, increment]
+  booking_id bigint [not null]
+  booking_room_id bigint [not null]
+  booking_guest_id bigint [not null]
+  room_allocation_id bigint [not null]
+  arrived_at datetime(6) [not null]
+  departed_at datetime(6)
+  indexes { (room_allocation_id, booking_guest_id, arrived_at) [unique]
+    (booking_guest_id, arrived_at)
+  }
+  checks { `departed_at IS NULL OR departed_at >= arrived_at` [name: 'ck_stay_guest_times'] }
+  Note: 'Gắn từng khách vào phòng vật lý và khoảng ở thực tế, giữ lịch sử khi khách đổi phòng. Service kiểm tra không gán khách vào 2 phòng cùng lúc.'
+}
+Ref: stay_guests.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+Ref: stay_guests.(booking_guest_id, booking_id) > booking_guests.(id, booking_id)
+Ref: stay_guests.(room_allocation_id, booking_room_id) > room_allocations.(id, booking_room_id)
+
+Table booking_status_history {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  booking_room_id bigint [note: 'NULL = thay trạng thái đơn tổng; có giá trị = thay trạng thái một phòng trong đơn.']
+  old_status varchar(30)
+  new_status varchar(30) [not null]
+  changed_by bigint [ref: > users.id]
+  reason varchar(1000)
+  changed_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, changed_at)
+    (booking_room_id, changed_at)
+  }
+}
+Ref: booking_status_history.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+
+Table booking_change_requests {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  booking_room_id bigint
+  requested_by bigint [not null, ref: > users.id]
+  change_type varchar(30) [not null, note: 'CHANGE_DATES / EXTEND / SHORTEN / CHANGE_ROOM']
+  before_snapshot json [not null]
+  requested_changes json [not null, note: 'Ngày/loại/phòng đề xuất; không có tác dụng giữ phòng cho đến khi được duyệt.']
+  reason varchar(1000)
+  status varchar(20) [not null, default: 'PENDING']
+  handled_by bigint [ref: > users.id]
+  handled_at datetime(6)
+  response_note varchar(1000)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, created_at)
+    (status, created_at)
+  }
+  checks { `status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN')` [name: 'ck_change_request_status']
+    `change_type IN ('CHANGE_DATES','EXTEND','SHORTEN','CHANGE_ROOM')` [name: 'ck_change_request_type']
+  }
+}
+Ref: booking_change_requests.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+
+Table booking_cancellations {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  booking_room_id bigint [note: 'NULL hủy toàn bộ; có id hủy riêng một phòng. Không tạo lại cho phần đã hủy.']
+  kind varchar(20) [not null, note: 'CANCEL / NO_SHOW / EXPIRED']
+  requested_by bigint [ref: > users.id]
+  processed_by bigint [ref: > users.id]
+  reason varchar(1000) [not null]
+  policy_snapshot json [not null]
+  cancelled_room_amount decimal(15,2) [not null]
+  cancellation_fee decimal(15,2) [not null, default: 0]
+  proposed_refund_amount decimal(15,2) [not null, default: 0, note: 'Đề xuất; tiền hoàn thực tế lấy từ payment_transactions REFUND thành công.']
+  processed_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, processed_at)
+    (id, booking_id) [unique]
+  }
+  checks { `kind IN ('CANCEL','NO_SHOW','EXPIRED') AND cancelled_room_amount >= 0 AND cancellation_fee >= 0 AND proposed_refund_amount >= 0` [name: 'ck_cancellation_values'] }
+}
+Ref: booking_cancellations.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+
+Table booking_qr_tokens {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  token_hash char(64) [not null, unique]
+  expires_at datetime(6) [not null]
+  revoked_at datetime(6)
+  last_scanned_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { booking_id }
+  Note: 'QR chứa token ngẫu nhiên, không chứa CCCD hay quyền tự check-in. Lễ tân phải đăng nhập và xác minh khách. Có thể quét lại cho booking nhiều phòng, thu hồi khi hủy.'
+}
+
+Table voucher_redemptions {
+  id bigint [pk, increment]
+  voucher_id bigint [not null, ref: > vouchers.id]
+  booking_id bigint [not null, unique]
+  customer_id bigint [not null]
+  discount_amount decimal(15,2) [not null]
+  voucher_snapshot json [not null]
+  status varchar(20) [not null, default: 'RESERVED']
+  reserved_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  redeemed_at datetime(6)
+  released_at datetime(6)
+  indexes { (voucher_id, customer_id, status)
+    (voucher_id, status)
+  }
+  checks { `discount_amount >= 0 AND status IN ('RESERVED','REDEEMED','RELEASED')` [name: 'ck_redemption_values'] }
+  Note: 'Tối đa 1 voucher/booking. Khóa voucher trước kiểm tra quota; giữ lượt khi PENDING, dùng khi CONFIRMED, trả lượt theo chính sách hủy/hết hạn. Retry không tạo redemption mới cho cùng booking.'
+}
+Ref: voucher_redemptions.(booking_id, customer_id) > bookings.(id, customer_id)
+
+// ── 05. DỊCH VỤ, CÁC KHOẢN PHÍ, THANH TOÁN VÀ HÓA ĐƠN ───────────────────
+Table service_categories {
+  id bigint [pk, increment]
+  code varchar(30) [not null, unique]
+  name varchar(100) [not null]
+  is_active boolean [not null, default: true]
+}
+
+Table services {
+  id bigint [pk, increment]
+  category_id bigint [not null, ref: > service_categories.id]
+  code varchar(40) [not null, unique]
+  name varchar(150) [not null]
+  description text
+  unit varchar(40) [not null, note: 'chai / món / kg / lượt ...']
+  unit_price decimal(15,2) [not null]
+  tax_percent decimal(5,2) [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  checks { `unit_price >= 0 AND tax_percent BETWEEN 0 AND 100` [name: 'ck_service_values'] }
+}
+
+Table service_usages {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  booking_room_id bigint
+  room_allocation_id bigint
+  service_id bigint [not null, ref: > services.id]
+  service_name_snapshot varchar(150) [not null]
+  unit_snapshot varchar(40) [not null]
+  quantity decimal(10,3) [not null]
+  unit_price_snapshot decimal(15,2) [not null]
+  tax_percent_snapshot decimal(5,2) [not null, default: 0]
+  status varchar(20) [not null, default: 'ACTIVE']
+  used_at datetime(6) [not null]
+  recorded_by bigint [not null, ref: > users.id]
+  voided_by bigint [ref: > users.id]
+  voided_at datetime(6)
+  void_reason varchar(500)
+  notes varchar(500)
+  indexes { (booking_id, used_at)
+    (service_id, used_at)
+    (id, booking_id) [unique]
+  }
+  checks { `quantity > 0 AND unit_price_snapshot >= 0 AND tax_percent_snapshot BETWEEN 0 AND 100` [name: 'ck_usage_values']
+    `status IN ('ACTIVE','VOIDED') AND (room_allocation_id IS NULL OR booking_room_id IS NOT NULL)` [name: 'ck_usage_status']
+  }
+  Note: 'Giá lúc sử dụng không thay theo bảng services. Ghi usage và charge tương ứng trong cùng transaction. VOIDED phải xử lý charge/thuế đi kèm.'
+}
+Ref: service_usages.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+Ref: service_usages.(room_allocation_id, booking_room_id) > room_allocations.(id, booking_room_id)
+
+Table booking_charges {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  booking_room_id bigint
+  booking_room_night_id bigint
+  service_usage_id bigint
+  cancellation_id bigint
+  surcharge_policy_id bigint [ref: > surcharge_policies.id]
+  adjusts_charge_id bigint [note: 'Khoản điều chỉnh liên kết khoản gốc, cùng booking.']
+  source_key varchar(150) [not null, note: 'Khóa chống tạo phí lặp: ROOM:night_id, SERVICE:usage_id, TAX:charge_id...']
+  kind varchar(30) [not null]
+  description varchar(500) [not null]
+  service_date date [not null, note: 'Ngày nghiệp vụ theo múi giờ khách sạn.']
+  quantity decimal(10,3) [not null, default: 1]
+  unit_price decimal(15,2) [not null, note: 'Âm cho giảm giá/điều chỉnh giảm. Phí phòng đã trừ giảm dài ngày/voucher tại nights.']
+  amount decimal(15,2) [not null]
+  tax_percent_snapshot decimal(5,2)
+  policy_snapshot json
+  status varchar(20) [not null, default: 'POSTED']
+  created_by bigint [ref: > users.id]
+  voided_by bigint [ref: > users.id]
+  voided_at datetime(6)
+  void_reason varchar(500)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, source_key) [unique]
+    (id, booking_id) [unique]
+    (kind, service_date, status)
+    (booking_id, status)
+  }
+  checks { `quantity > 0 AND amount = ROUND(quantity * unit_price, 2)` [name: 'ck_charge_amount']
+    `kind IN ('ROOM','SERVICE','SURCHARGE','DISCOUNT','TAX','CANCELLATION','ROOM_ADJUSTMENT','ADJUSTMENT') AND status IN ('POSTED','VOIDED')` [name: 'ck_charge_status_kind']
+    `booking_room_night_id IS NULL OR booking_room_id IS NOT NULL` [name: 'ck_charge_night_owner']
+    `kind NOT IN ('ROOM','ROOM_ADJUSTMENT') OR booking_room_night_id IS NOT NULL` [name: 'ck_room_charge_source']
+    `kind <> 'SERVICE' OR service_usage_id IS NOT NULL` [name: 'ck_service_charge_source']
+    `tax_percent_snapshot IS NULL OR tax_percent_snapshot BETWEEN 0 AND 100` [name: 'ck_charge_tax']
+  }
+  Note: 'Sổ các khoản phải thu là nguồn tổng tiền duy nhất: SUM(amount WHERE POSTED). Cọc/thu/hoàn nằm bảng thanh toán, không thêm thành khoản phí. Sau xuất hóa đơn không sửa/void khoản gốc; xử lý theo quy trình điều chỉnh trong tài liệu.'
+}
+Ref: booking_charges.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+Ref: booking_charges.(booking_room_night_id, booking_room_id) > booking_room_nights.(id, booking_room_id)
+Ref: booking_charges.(service_usage_id, booking_id) > service_usages.(id, booking_id)
+Ref: booking_charges.(cancellation_id, booking_id) > booking_cancellations.(id, booking_id)
+Ref: booking_charges.(adjusts_charge_id, booking_id) > booking_charges.(id, booking_id)
+
+Table payment_transactions {
+  id bigint [pk, increment]
+  transaction_code varchar(40) [not null, unique]
+  booking_id bigint [not null, ref: > bookings.id]
+  parent_payment_id bigint [note: 'Bắt buộc với REFUND; tham chiếu khoản thu gốc cùng booking.']
+  kind varchar(20) [not null, note: 'DEPOSIT / PAYMENT / REFUND']
+  method varchar(30) [not null, note: 'CASH / BANK_TRANSFER / ONLINE_GATEWAY']
+  provider varchar(50) [not null, note: 'CASH, BANK, VNPay_SANDBOX, MoMo_SANDBOX...']
+  provider_transaction_id varchar(150)
+  idempotency_key varchar(100) [not null, unique]
+  amount decimal(15,2) [not null, note: 'Luôn >0; dấu thu/hoàn theo kind.']
+  currency char(3) [not null, default: 'VND']
+  status varchar(20) [not null, default: 'PENDING']
+  work_session_id bigint [ref: > work_sessions.id]
+  created_by bigint [ref: > users.id]
+  approved_by bigint [ref: > users.id]
+  reason varchar(1000)
+  paid_at datetime(6)
+  expires_at datetime(6)
+  failure_reason varchar(1000)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (provider, provider_transaction_id) [unique]
+    (booking_id, status)
+    (status, expires_at)
+    (kind, status, paid_at)
+    (id, booking_id) [unique]
+  }
+  checks { `amount > 0 AND kind IN ('DEPOSIT','PAYMENT','REFUND')` [name: 'ck_payment_values']
+    `method IN ('CASH','BANK_TRANSFER','ONLINE_GATEWAY') AND status IN ('PENDING','SUCCEEDED','FAILED','CANCELLED')` [name: 'ck_payment_status']
+    `(kind = 'REFUND' AND parent_payment_id IS NOT NULL) OR (kind <> 'REFUND' AND parent_payment_id IS NULL)` [name: 'ck_refund_parent']
+  }
+  Note: 'Nhiều lần thu và hoàn từng phần. Khóa khoản thu gốc khi tạo hoàn; tổng hoàn PENDING+SUCCEEDED không vượt số đã thu SUCCEEDED. Webhook xác minh chữ ký, số tiền, loại tiền, merchant/order trước đổi trạng thái.'
+}
+Ref: payment_transactions.(parent_payment_id, booking_id) > payment_transactions.(id, booking_id)
+
+Table payment_webhook_events {
+  id bigint [pk, increment]
+  provider varchar(50) [not null]
+  provider_event_id varchar(200) [not null]
+  payment_transaction_id bigint [ref: > payment_transactions.id]
+  payload_hash char(64) [not null]
+  redacted_payload json
+  signature_valid boolean [not null]
+  processing_status varchar(20) [not null, default: 'RECEIVED']
+  error_message varchar(1000)
+  received_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  processed_at datetime(6)
+  indexes { (provider, provider_event_id) [unique]
+    (processing_status, received_at)
+  }
+  checks { `processing_status IN ('RECEIVED','PROCESSED','IGNORED','FAILED')` [name: 'ck_webhook_status'] }
+  Note: 'Nhật ký callback chống xử lý trùng. Nếu gateway không có event_id, tạo khóa xác định từ transaction/reference + trạng thái đã ký. Không lưu secret hoặc dữ liệu thẻ.'
+}
+
+Table invoices {
+  id bigint [pk, increment]
+  invoice_number varchar(40) [not null, unique]
+  booking_id bigint [not null, ref: > bookings.id]
+  revision int [not null, default: 1]
+  supersedes_invoice_id bigint [unique, note: 'Hóa đơn sửa thay thế bản VOID cùng booking.']
+  status varchar(20) [not null, default: 'DRAFT']
+  seller_snapshot json [not null]
+  buyer_name varchar(200) [not null]
+  buyer_email varchar(150)
+  buyer_address varchar(500)
+  buyer_tax_code varchar(30)
+  currency char(3) [not null, default: 'VND']
+  subtotal_amount decimal(15,2) [not null, note: 'Tổng dòng trừ TAX; giá phòng đã trừ voucher.']
+  tax_amount decimal(15,2) [not null, default: 0]
+  total_amount decimal(15,2) [not null]
+  issued_by bigint [ref: > users.id]
+  issued_at datetime(6)
+  voided_by bigint [ref: > users.id]
+  voided_at datetime(6)
+  void_reason varchar(1000)
+  pdf_storage_key varchar(500) [note: 'Đường dẫn kho riêng; API kiểm tra quyền rồi trả file/link có hạn.']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (booking_id, revision) [unique]
+    (id, booking_id) [unique]
+    (status, issued_at)
+  }
+  checks { `revision > 0 AND status IN ('DRAFT','ISSUED','VOID') AND total_amount = subtotal_amount + tax_amount` [name: 'ck_invoice_values']
+  }
+  Note: 'Hóa đơn bài tập/PDF nội bộ, không tự nhận là hóa đơn điện tử hợp lệ thuế. Khóa booking để chỉ có một bản DRAFT/ISSUED đang hiệu lực. ISSUED bất biến; sai phải VOID có lý do và phát hành revision mới. Cọc không trừ vào giá trị hóa đơn, chỉ trừ số phải thanh toán.'
+}
+Ref: invoices.(supersedes_invoice_id, booking_id) > invoices.(id, booking_id)
+
+Table invoice_lines {
+  id bigint [pk, increment]
+  invoice_id bigint [not null]
+  booking_id bigint [not null]
+  booking_charge_id bigint [not null]
+  line_number int [not null]
+  kind varchar(30) [not null]
+  description varchar(500) [not null]
+  service_date date [not null]
+  quantity decimal(10,3) [not null]
+  unit_price decimal(15,2) [not null]
+  amount decimal(15,2) [not null]
+  details_snapshot json [note: 'Có thể ghi giá gốc, giảm dài ngày, voucher để hiển thị PDF. Không trừ giảm lần thứ hai.']
+  indexes { (invoice_id, line_number) [unique]
+    (invoice_id, booking_charge_id) [unique]
+  }
+  checks { `line_number > 0 AND quantity > 0 AND amount = ROUND(quantity * unit_price, 2)` [name: 'ck_invoice_line_values'] }
+  Note: 'Snapshot các charge POSTED lúc phát hành; tổng dòng phải bằng tổng hóa đơn trong transaction. Cho phép cùng charge xuất lại trong revision mới thay hóa đơn VOID, không đếm doanh thu từ nhiều revision.'
+}
+Ref: invoice_lines.(invoice_id, booking_id) > invoices.(id, booking_id)
+Ref: invoice_lines.(booking_charge_id, booking_id) > booking_charges.(id, booking_id)
+
+// ── 06. THÔNG BÁO, YÊU THÍCH, ĐÁNH GIÁ, HỖ TRỢ ───────────────────────────
+Table outbox_events {
+  id bigint [pk, increment]
+  event_key varchar(150) [not null, unique]
+  event_type varchar(100) [not null]
+  aggregate_type varchar(50) [not null]
+  aggregate_id bigint [not null]
+  payload json [not null]
+  status varchar(20) [not null, default: 'PENDING']
+  attempts int [not null, default: 0]
+  available_at datetime(6) [not null]
+  locked_until datetime(6)
+  worker_id varchar(100)
+  processed_at datetime(6)
+  last_error varchar(1000)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (status, available_at)
+    locked_until
+    (aggregate_type, aggregate_id)
+  }
+  checks { `status IN ('PENDING','PROCESSING','PROCESSED','FAILED') AND attempts >= 0` [name: 'ck_outbox_values'] }
+  Note: 'Ghi cùng transaction với booking/payment. Worker gửi WebSocket/email sau commit, retry có lease và event_key chống trùng. aggregate là tham chiếu đa hình, không phải FK.'
+}
+
+Table notifications {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  booking_id bigint [ref: > bookings.id]
+  outbox_event_id bigint [ref: > outbox_events.id]
+  deduplication_key varchar(200) [not null, unique]
+  type varchar(60) [not null]
+  title varchar(200) [not null]
+  body text [not null]
+  read_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (user_id, read_at, created_at)
+    booking_id
+  }
+  Note: 'Một dòng mỗi người nhận; gửi cho lễ tân bằng fan-out tới users có quyền phù hợp, không tạo user_id đa hình.'
+}
+
+Table notification_deliveries {
+  id bigint [pk, increment]
+  notification_id bigint [ref: > notifications.id]
+  outbox_event_id bigint [not null, ref: > outbox_events.id]
+  channel varchar(20) [not null, note: 'IN_APP / EMAIL / WEBSOCKET']
+  recipient_address varchar(200) [not null, note: 'Email hoặc user:id; hỗ trợ email khách walk-in chưa có users.']
+  deduplication_key varchar(200) [not null, unique]
+  status varchar(20) [not null, default: 'PENDING']
+  attempts int [not null, default: 0]
+  provider_message_id varchar(150)
+  sent_at datetime(6)
+  next_retry_at datetime(6)
+  last_error varchar(1000)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (status, next_retry_at) }
+  checks { `channel IN ('IN_APP','EMAIL','WEBSOCKET') AND status IN ('PENDING','SENT','FAILED') AND attempts >= 0` [name: 'ck_delivery_values'] }
+}
+
+Table favorites {
+  customer_id bigint [not null, ref: > customers.id]
+  room_type_id bigint [not null, ref: > room_types.id]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (customer_id, room_type_id) [pk]
+    room_type_id
+  }
+}
+
+Table reviews {
+  id bigint [pk, increment]
+  booking_id bigint [not null]
+  booking_room_id bigint [not null, unique]
+  customer_id bigint [not null]
+  rating int [not null]
+  comment text
+  status varchar(20) [not null, default: 'PUBLISHED']
+  moderated_by bigint [ref: > users.id]
+  moderated_at datetime(6)
+  moderation_reason varchar(500)
+  reply text
+  replied_by bigint [ref: > users.id]
+  replied_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (status, created_at) }
+  checks { `rating BETWEEN 1 AND 5 AND status IN ('PENDING','PUBLISHED','HIDDEN')` [name: 'ck_review_values'] }
+  Note: 'Chỉ chủ booking có phòng CHECKED_OUT và đêm STAYED được đánh giá. Một đánh giá/một phòng trong booking; loại phòng suy từ booking_rooms, tránh FK loại phòng sai.'
+}
+Ref: reviews.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+Ref: reviews.(booking_id, customer_id) > bookings.(id, customer_id)
+
+Table support_tickets {
+  id bigint [pk, increment]
+  ticket_code varchar(30) [not null, unique]
+  customer_id bigint [not null, ref: > customers.id]
+  booking_id bigint
+  subject varchar(200) [not null]
+  category varchar(30) [not null, note: 'BOOKING / PAYMENT / ROOM / OTHER']
+  priority varchar(20) [not null, default: 'NORMAL']
+  status varchar(30) [not null, default: 'OPEN']
+  assigned_employee_id bigint [ref: > employees.id]
+  resolved_at datetime(6)
+  closed_at datetime(6)
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  updated_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (customer_id, created_at)
+    (status, priority, created_at)
+  }
+  checks { `category IN ('BOOKING','PAYMENT','ROOM','OTHER') AND priority IN ('LOW','NORMAL','HIGH','URGENT')` [name: 'ck_ticket_values']
+    `status IN ('OPEN','IN_PROGRESS','WAITING_CUSTOMER','RESOLVED','CLOSED')` [name: 'ck_ticket_status']
+  }
+}
+Ref: support_tickets.(booking_id, customer_id) > bookings.(id, customer_id)
+
+Table support_messages {
+  id bigint [pk, increment]
+  ticket_id bigint [not null, ref: > support_tickets.id]
+  sender_user_id bigint [not null, ref: > users.id]
+  body text [not null]
+  is_internal boolean [not null, default: false, note: 'Ghi chú nội bộ không trả về API của khách.']
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+  indexes { (ticket_id, created_at) }
+  Note: 'Kiểm tra người gửi là chủ ticket hoặc nhân viên có quyền. Khách chỉ đọc tin không is_internal.'
+}
+
+// Nhóm bảng có thể thu gọn trên dbdiagram. Tính năng hiển thị nhóm tùy gói của dbdiagram.
+TableGroup TaiKhoan_PhanQuyen [color: #4263eb] {
+  users
+  roles
+  permissions
+  user_roles
+  role_permissions
+  refresh_tokens
+  account_tokens
+  employees
+  customers
+  audit_logs
+}
+TableGroup KhachSan_Phong_VanHanh [color: #0ca678] {
+  hotel_settings
+  system_settings
+  floors
+  room_types
+  room_type_images
+  amenities
+  room_type_amenities
+  rooms
+  room_status_history
+  work_sessions
+  maintenance_requests
+  room_blocks
+  housekeeping_tasks
+}
+TableGroup Gia_ChinhSach_KhuyenMai [color: #f08c00] {
+  deposit_policies
+  cancellation_policies
+  cancellation_policy_rules
+  surcharge_policies
+  rate_rules
+  rate_rule_room_types
+  vouchers
+  voucher_room_types
+}
+TableGroup DatPhong_LuuTru [color: #ae3ec9] {
+  bookings
+  booking_rooms
+  room_type_inventory
+  booking_room_nights
+  room_allocations
+  room_night_claims
+  booking_guests
+  stay_guests
+  booking_status_history
+  booking_change_requests
+  booking_cancellations
+  booking_qr_tokens
+  voucher_redemptions
+}
+TableGroup DichVu_ThanhToan_HoaDon [color: #e03131] {
+  service_categories
+  services
+  service_usages
+  booking_charges
+  payment_transactions
+  payment_webhook_events
+  invoices
+  invoice_lines
+}
+TableGroup ThongBao_ChamSocKhach [color: #1098ad] {
+  outbox_events
+  notifications
+  notification_deliveries
+  favorites
+  reviews
+  support_tickets
+  support_messages
+}

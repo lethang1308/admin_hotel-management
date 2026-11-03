@@ -45,32 +45,32 @@
 
         <div class="sidebar-menu">
             <ul class="menu">
-                <li class="sidebar-title">Menu</li>
+                <li class="sidebar-title" th:text="#{admin.sidebar.menu}">Menu</li>
 
                 <li class="sidebar-item" th:classappend="${currentPath == '/admin'} ? 'active' : ''">
                     <a th:href="@{/admin}" class="sidebar-link">
                         <i class="bi bi-grid-fill"></i>
-                        <span>Dashboard</span>
+                        <span th:text="#{admin.nav.dashboard}">Dashboard</span>
                     </a>
                 </li>
 
-                <li class="sidebar-title">Identity &amp; Access</li>
+                <li class="sidebar-title" th:text="#{admin.sidebar.identityAccess}">Identity &amp; Access</li>
 
                 <li class="sidebar-item has-sub"
                     th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active' : ''">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-people-fill"></i>
-                        <span>User Management</span>
+                        <span th:text="#{admin.nav.users}">User Management</span>
                     </a>
                     <ul class="submenu"
                         th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active submenu-open' : ''">
                         <li class="submenu-item"
                             th:classappend="${currentPath == '/admin/users'} ? 'active' : ''">
-                            <a th:href="@{/admin/users}" class="submenu-link">All Users</a>
+                            <a th:href="@{/admin/users}" class="submenu-link" th:text="#{admin.nav.allUsers}">All Users</a>
                         </li>
                         <li class="submenu-item"
                             th:classappend="${currentPath == '/admin/users/create'} ? 'active' : ''">
-                            <a th:href="@{/admin/users/create}" class="submenu-link">Create User</a>
+                            <a th:href="@{/admin/users/create}" class="submenu-link" th:text="#{admin.nav.createUser}">Create User</a>
                         </li>
                     </ul>
                 </li>
@@ -79,23 +79,23 @@
                     th:classappend="${currentPath != null and currentPath.startsWith('/admin/roles')} ? 'active' : ''">
                     <a th:href="@{/admin/roles}" class="sidebar-link">
                         <i class="bi bi-shield-lock-fill"></i>
-                        <span>Roles &amp; RBAC</span>
+                        <span th:text="#{admin.nav.roles}">Roles &amp; RBAC</span>
                     </a>
                 </li>
 
-                <li class="sidebar-title">Developer &amp; System</li>
+                <li class="sidebar-title" th:text="#{admin.sidebar.developerSystem}">Developer &amp; System</li>
 
                 <li class="sidebar-item">
                     <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener" class="sidebar-link">
                         <i class="bi bi-file-earmark-code-fill"></i>
-                        <span>OpenAPI / Swagger</span>
+                        <span th:text="#{admin.nav.swagger}">OpenAPI / Swagger</span>
                     </a>
                 </li>
 
                 <li class="sidebar-item">
                     <a th:href="@{/actuator/health}" target="_blank" rel="noopener" class="sidebar-link">
                         <i class="bi bi-heart-pulse-fill"></i>
-                        <span>System Health</span>
+                        <span th:text="#{admin.nav.health}">System Health</span>
                     </a>
                 </li>
             </ul>

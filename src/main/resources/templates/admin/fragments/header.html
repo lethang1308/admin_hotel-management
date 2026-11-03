@@ -16,12 +16,39 @@
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <div class="ms-3 d-none d-md-block">
-                    <span class="badge bg-light-primary" th:text="${appName} ?: 'Enterprise Management System'">
+                    <span class="badge bg-light-primary" th:text="${appName} ?: #{admin.app.defaultName}">
                         Enterprise Management System
                     </span>
                 </div>
 
-                <ul class="navbar-nav ms-auto mb-lg-0">
+                <ul class="navbar-nav ms-auto mb-lg-0 align-items-center">
+                    <!-- Language Selector Dropdown -->
+                    <li class="nav-item dropdown me-3">
+                        <a class="nav-link dropdown-toggle text-gray-600 d-flex align-items-center gap-1"
+                           href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Language / Ngôn ngữ">
+                            <i class="bi bi-translate fs-5"></i>
+                            <span class="fw-semibold small ms-1" th:text="${currentLang == 'en' ? 'EN' : 'VI'}">VI</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 11rem;">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center justify-content-between"
+                                   th:classappend="${currentLang != 'en'} ? 'active fw-bold' : ''"
+                                   th:href="@{${currentPath}(lang='vi')}">
+                                    <span>🇻🇳 Tiếng Việt</span>
+                                    <i class="bi bi-check2" th:if="${currentLang != 'en'}"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center justify-content-between"
+                                   th:classappend="${currentLang == 'en'} ? 'active fw-bold' : ''"
+                                   th:href="@{${currentPath}(lang='en')}">
+                                    <span>🇬🇧 English</span>
+                                    <i class="bi bi-check2" th:if="${currentLang == 'en'}"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
                     <li class="nav-item me-2">
                         <a class="nav-link text-gray-600" th:href="@{/swagger-ui.html}" target="_blank"
                            rel="noopener" title="OpenAPI Documentation">
@@ -49,21 +76,21 @@
                     <ul class="dropdown-menu dropdown-menu-end" style="min-width: 13rem;">
                         <li>
                             <h6 class="dropdown-header"
-                                th:text="'Signed in as ' + (${currentAdminName} ?: 'Admin')">Signed in</h6>
+                                th:text="#{admin.header.signedInAs(${currentAdminName} ?: 'Admin')}">Signed in</h6>
                         </li>
                         <li>
                             <a class="dropdown-item" th:href="@{/admin}">
-                                <i class="icon-mid bi bi-grid me-2"></i> Dashboard
+                                <i class="icon-mid bi bi-grid me-2"></i> <span th:text="#{admin.nav.dashboard}">Dashboard</span>
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" th:href="@{/admin/users}">
-                                <i class="icon-mid bi bi-people me-2"></i> User Management
+                                <i class="icon-mid bi bi-people me-2"></i> <span th:text="#{admin.nav.users}">User Management</span>
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" th:href="@{/admin/roles}">
-                                <i class="icon-mid bi bi-shield-lock me-2"></i> Roles &amp; RBAC
+                                <i class="icon-mid bi bi-shield-lock me-2"></i> <span th:text="#{admin.nav.roles}">Roles &amp; RBAC</span>
                             </a>
                         </li>
                         <li>
@@ -74,7 +101,7 @@
                                 <input type="hidden" th:if="${_csrf != null}"
                                        th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                                 <button type="submit" class="dropdown-item text-danger">
-                                    <i class="icon-mid bi bi-box-arrow-left me-2"></i> Logout
+                                    <i class="icon-mid bi bi-box-arrow-left me-2"></i> <span th:text="#{admin.header.logout}">Logout</span>
                                 </button>
                             </form>
                         </li>

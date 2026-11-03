@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Dashboard', ~{::#dashboard-page}, ~{::#dashboard-scripts})}">
+      th:replace="~{admin/layouts/main :: layout(#{admin.nav.dashboard}, ~{::#dashboard-page}, ~{::#dashboard-scripts})}">
 <body>
 <div id="dashboard-page">
     <div class="page-heading">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                <h3 class="mb-1">System Overview</h3>
-                <p class="text-subtitle text-muted mb-0">
+                <h3 class="mb-1" th:text="#{admin.dashboard.title}">System Overview</h3>
+                <p class="text-subtitle text-muted mb-0" th:text="#{admin.dashboard.subtitle}">
                     Core RBAC, Authentication &amp; User Management metrics
                 </p>
             </div>
             <div class="d-flex gap-2">
                 <a th:href="@{/admin/users}" class="btn btn-outline-primary">
-                    <i class="bi bi-people me-1"></i> Manage Users
+                    <i class="bi bi-people me-1"></i> <span th:text="#{admin.dashboard.manageUsers}">Manage Users</span>
                 </a>
                 <a th:href="@{/admin/users/create}" class="btn btn-primary">
-                    <i class="bi bi-person-plus-fill me-1"></i> Create User
+                    <i class="bi bi-person-plus-fill me-1"></i> <span th:text="#{admin.dashboard.createUser}">Create User</span>
                 </a>
             </div>
         </div>
@@ -36,7 +36,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
-                                        <h6 class="text-muted font-semibold">Total Accounts</h6>
+                                        <h6 class="text-muted font-semibold" th:text="#{admin.dashboard.totalAccounts}">Total Accounts</h6>
                                         <h6 class="font-extrabold mb-0" th:text="${totalUsers}">0</h6>
                                     </div>
                                 </div>
@@ -54,7 +54,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
-                                        <h6 class="text-muted font-semibold">Active Accounts</h6>
+                                        <h6 class="text-muted font-semibold" th:text="#{admin.dashboard.activeAccounts}">Active Accounts</h6>
                                         <h6 class="font-extrabold mb-0" th:text="${activeUsers}">0</h6>
                                     </div>
                                 </div>
@@ -72,7 +72,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
-                                        <h6 class="text-muted font-semibold">Inactive / Locked</h6>
+                                        <h6 class="text-muted font-semibold" th:text="#{admin.dashboard.inactiveAccounts}">Inactive / Locked</h6>
                                         <h6 class="font-extrabold mb-0" th:text="${inactiveUsers}">0</h6>
                                     </div>
                                 </div>
@@ -90,7 +90,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-8 col-lg-12 col-xl-12 col-xxl-7">
-                                        <h6 class="text-muted font-semibold">System Roles</h6>
+                                        <h6 class="text-muted font-semibold" th:text="#{admin.dashboard.systemRoles}">System Roles</h6>
                                         <h6 class="font-extrabold mb-0" th:text="${totalRoles}">0</h6>
                                     </div>
                                 </div>
@@ -103,25 +103,27 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h4 class="mb-0">Recently Created Accounts</h4>
-                                <a th:href="@{/admin/users}" class="btn btn-sm btn-light-primary">View All Users</a>
+                                <h4 class="mb-0" th:text="#{admin.dashboard.recentAccounts}">Recently Created Accounts</h4>
+                                <a th:href="@{/admin/users}" class="btn btn-sm btn-light-primary"
+                                   th:text="#{admin.dashboard.viewAllUsers}">View All Users</a>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-hover table-lg align-middle mb-0">
                                         <thead>
                                         <tr>
-                                            <th>User</th>
-                                            <th>Email</th>
-                                            <th>Roles</th>
-                                            <th>Status</th>
-                                            <th>Created (UTC)</th>
-                                            <th class="text-end">Action</th>
+                                            <th th:text="#{admin.table.user}">User</th>
+                                            <th th:text="#{admin.table.email}">Email</th>
+                                            <th th:text="#{admin.table.roles}">Roles</th>
+                                            <th th:text="#{admin.table.status}">Status</th>
+                                            <th th:text="#{admin.table.created}">Created (UTC)</th>
+                                            <th class="text-end" th:text="#{admin.table.actions}">Action</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         <tr th:if="${#lists.isEmpty(recentUsers)}">
-                                            <td colspan="6" class="text-center text-muted py-4">
+                                            <td colspan="6" class="text-center text-muted py-4"
+                                                th:text="#{admin.dashboard.noUsers}">
                                                 No user accounts found.
                                             </td>
                                         </tr>
@@ -146,13 +148,13 @@
                                             <td>
                                                 <span class="badge"
                                                       th:classappend="${u.status.name() == 'ACTIVE'} ? 'bg-light-success' : (${u.status.name() == 'LOCKED'} ? 'bg-light-danger' : 'bg-light-secondary')"
-                                                      th:text="${u.status}">ACTIVE</span>
+                                                      th:text="#{${'admin.status.' + u.status.name()}}">ACTIVE</span>
                                             </td>
                                             <td class="text-muted small" th:text="${@dateFmt.utc(u.createdAt)}">2026-11-02</td>
                                             <td class="text-end">
                                                 <a th:href="@{/admin/users/{id}/edit(id=${u.id})}"
                                                    class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-pencil-square"></i> Edit
+                                                    <i class="bi bi-pencil-square"></i> <span th:text="#{admin.btn.edit}">Edit</span>
                                                 </a>
                                             </td>
                                         </tr>
@@ -184,7 +186,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h4>Account Status Ratio</h4>
+                        <h4 th:text="#{admin.dashboard.accountRatio}">Account Status Ratio</h4>
                     </div>
                     <div class="card-body">
                         <div id="chart-visitors-profile"></div>
@@ -193,15 +195,15 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h4>Quick Navigation</h4>
+                        <h4 th:text="#{admin.dashboard.quickNav}">Quick Navigation</h4>
                     </div>
                     <div class="card-content pb-4 px-4 d-grid gap-2">
                         <a th:href="@{/admin/roles}" class="btn btn-outline-primary text-start">
-                            <i class="bi bi-shield-lock me-2"></i> View System Roles
+                            <i class="bi bi-shield-lock me-2"></i> <span th:text="#{admin.dashboard.viewRoles}">View System Roles</span>
                         </a>
                         <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener"
                            class="btn btn-light-secondary text-start">
-                            <i class="bi bi-file-earmark-code me-2"></i> REST OpenAPI Docs
+                            <i class="bi bi-file-earmark-code me-2"></i> <span th:text="#{admin.dashboard.openApiDocs}">REST OpenAPI Docs</span>
                         </a>
                     </div>
                 </div>
@@ -221,10 +223,12 @@
             const activeCount = /*[[${activeUsers}]]*/ 0;
             const inactiveCount = /*[[${inactiveUsers}]]*/ 0;
             const hasData = (activeCount + inactiveCount) > 0;
+            const labelActive = /*[[#{admin.dashboard.chart.active}]]*/ "Active";
+            const labelInactive = /*[[#{admin.dashboard.chart.inactive}]]*/ "Inactive / Locked";
 
             const optionsVisitorsProfile = {
                 series: hasData ? [activeCount, inactiveCount] : [1, 0],
-                labels: ["Active", "Inactive / Locked"],
+                labels: [labelActive, labelInactive],
                 colors: ["#435ebe", "#55c6e8"],
                 chart: {
                     type: "donut",

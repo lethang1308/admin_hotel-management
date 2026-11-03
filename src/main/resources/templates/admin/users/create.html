@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layouts/main :: layout('Create User', ~{::#user-create-page}, ~{})}">
+      th:replace="~{admin/layouts/main :: layout(#{admin.users.createTitle}, ~{::#user-create-page}, ~{})}">
 <body>
 <div id="user-create-page">
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
                 <div class="col-12 col-md-6 order-md-1 order-last">
-                    <h3>Create User Account</h3>
-                    <p class="text-subtitle text-muted">
+                    <h3 th:text="#{admin.users.createTitle}">Create User Account</h3>
+                    <p class="text-subtitle text-muted" th:text="#{admin.users.createSubtitle}">
                         Provision a new account and assign RBAC system roles
                     </p>
                 </div>
                 <div class="col-12 col-md-6 order-md-2 order-first">
                     <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a th:href="@{/admin}">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a th:href="@{/admin/users}">Users</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Create User</li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin}" th:text="#{admin.nav.dashboard}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin/users}" th:text="#{admin.nav.users}">Users</a></li>
+                            <li class="breadcrumb-item active" aria-current="page" th:text="#{admin.nav.createUser}">Create User</li>
                         </ol>
                     </nav>
                 </div>
@@ -29,9 +29,9 @@
                 <div class="col-lg-8 col-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h4 class="card-title mb-0">Account Information</h4>
+                            <h4 class="card-title mb-0" th:text="#{admin.users.accountInfo}">Account Information</h4>
                             <a th:href="@{/admin/users}" class="btn btn-sm btn-light-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Back to Users
+                                <i class="bi bi-arrow-left me-1"></i> <span th:text="#{admin.btn.backToUsers}">Back to Users</span>
                             </a>
                         </div>
                         <div class="card-content">
@@ -49,11 +49,12 @@
                                         <div class="row">
                                             <div class="col-12">
                                                 <div class="form-group has-icon-left mb-3">
-                                                    <label for="fullName" class="form-label">Full Name</label>
+                                                    <label for="fullName" class="form-label" th:text="#{admin.form.fullName}">Full Name</label>
                                                     <div class="position-relative">
                                                         <input id="fullName" type="text" class="form-control"
                                                                th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
-                                                               th:field="*{fullName}" placeholder="Enter full name" required>
+                                                               th:field="*{fullName}"
+                                                               th:placeholder="#{admin.form.fullNamePlaceholder}" required>
                                                         <div class="form-control-icon">
                                                             <i class="bi bi-person"></i>
                                                         </div>
@@ -66,11 +67,12 @@
 
                                             <div class="col-12">
                                                 <div class="form-group has-icon-left mb-3">
-                                                    <label for="email" class="form-label">Email Address</label>
+                                                    <label for="email" class="form-label" th:text="#{admin.form.email}">Email Address</label>
                                                     <div class="position-relative">
                                                         <input id="email" type="email" class="form-control"
                                                                th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
-                                                               th:field="*{email}" placeholder="user@example.com" required>
+                                                               th:field="*{email}"
+                                                               th:placeholder="#{admin.form.emailPlaceholder}" required>
                                                         <div class="form-control-icon">
                                                             <i class="bi bi-envelope"></i>
                                                         </div>
@@ -83,12 +85,12 @@
 
                                             <div class="col-12">
                                                 <div class="form-group has-icon-left mb-3">
-                                                    <label for="password" class="form-label">Password</label>
+                                                    <label for="password" class="form-label" th:text="#{admin.form.password}">Password</label>
                                                     <div class="position-relative">
                                                         <input id="password" type="password" class="form-control"
                                                                th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
                                                                th:field="*{password}"
-                                                               placeholder="8-72 characters, at least 1 letter and 1 number"
+                                                               th:placeholder="#{admin.form.passwordPlaceholder}"
                                                                required>
                                                         <div class="form-control-icon">
                                                             <i class="bi bi-lock"></i>
@@ -102,18 +104,18 @@
 
                                             <div class="col-12 col-md-6">
                                                 <div class="form-group mb-3">
-                                                    <label for="status" class="form-label">Initial Account Status</label>
+                                                    <label for="status" class="form-label" th:text="#{admin.form.initialStatus}">Initial Account Status</label>
                                                     <select id="status" class="form-select" th:field="*{status}">
                                                         <option th:each="st : ${statuses}"
                                                                 th:value="${st}"
-                                                                th:text="${st}"></option>
+                                                                th:text="#{${'admin.status.' + st.name()}}"></option>
                                                     </select>
                                                 </div>
                                             </div>
 
                                             <div class="col-12">
                                                 <div class="form-group mb-3">
-                                                    <label class="form-label d-block">Assigned Roles</label>
+                                                    <label class="form-label d-block" th:text="#{admin.form.assignedRoles}">Assigned Roles</label>
                                                     <div class="d-flex gap-4 flex-wrap pt-1">
                                                         <div class="form-check" th:each="r : ${allRoles}">
                                                             <input class="form-check-input" type="checkbox"
@@ -133,11 +135,11 @@
                                             </div>
 
                                             <div class="col-12 d-flex justify-content-end gap-2 mt-3">
-                                                <a th:href="@{/admin/users}" class="btn btn-light-secondary">
+                                                <a th:href="@{/admin/users}" class="btn btn-light-secondary" th:text="#{admin.btn.cancel}">
                                                     Cancel
                                                 </a>
                                                 <button type="submit" class="btn btn-primary">
-                                                    <i class="bi bi-check-lg me-1"></i> Create User
+                                                    <i class="bi bi-check-lg me-1"></i> <span th:text="#{admin.btn.create}">Create User</span>
                                                 </button>
                                             </div>
                                         </div>
