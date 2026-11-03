@@ -24,6 +24,11 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 42MB
+
   thymeleaf:
     cache: true
     encoding: UTF-8
@@ -74,6 +79,11 @@ logging:
     level: "%5p [cid:%X{correlationId:-none}]"
 
 app:
+  hotel:
+    media-directory: ${HOTEL_MEDIA_DIRECTORY:uploads/hotel}
+    inventory-days: 730
+    calendar-enabled: true
+    calendar-delay-ms: 60000
   identity:
     encryption-key: ${CUSTOMER_DOCUMENT_ENCRYPTION_KEY:}
   name: ${APP_NAME:Enterprise Management System}

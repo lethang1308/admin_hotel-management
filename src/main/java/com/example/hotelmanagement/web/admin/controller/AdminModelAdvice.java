@@ -20,11 +20,17 @@ import java.util.Locale;
 public class AdminModelAdvice {
 
     private final AppProperties appProperties;
+    private final com.example.hotelmanagement.modules.hotel.service.HotelSettingService
+            hotelSettings;
 
     @ModelAttribute
     public void populateCommonAdminAttributes(
             Model model, HttpServletRequest request, Authentication authentication) {
-        model.addAttribute("appName", appProperties.getName());
+        var brand = hotelSettings.brand();
+        model.addAttribute(
+                "appName",
+                brand == null || brand.name() == null ? appProperties.getName() : brand.name());
+        model.addAttribute("hotelLogo", brand == null ? null : brand.logoUrl());
         model.addAttribute("currentPath", request.getRequestURI());
         var languageUrl =
                 org.springframework.web.util.UriComponentsBuilder.fromPath(request.getRequestURI())

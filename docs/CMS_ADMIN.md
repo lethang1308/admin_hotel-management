@@ -94,3 +94,7 @@ Nghiệm thu gồm cả rollback User + Employee + audit khi mã bị trùng, ch
 ![So sánh audit](screenshots/cms-audit-diff.jpg)
 
 Kết quả nghiệm thu: Maven package BUILD SUCCESS; 43 kiểm thử mặc định đạt (1 test MySQL opt-in không chạy trong lệnh mặc định), bộ test MySQL riêng 3/3 đạt. Tổng cộng 44 test độc lập đã được chạy thành công khi tính cả test MySQL bổ sung. Backend local trả health UP. Xem cms-verification.json.
+
+## Phần 2 – Khách sạn và phòng
+
+Đã bổ sung cấu hình khách sạn, tầng/khu vực, tiện nghi, loại phòng/ảnh, phòng vật lý, bảo trì, hồ sơ lịch sử và sơ đồ phòng. Xem [hướng dẫn phần 2](CMS_HOTEL_ROOMS.md). Flyway bổ sung migration V5, không thay đổi V1–V4.

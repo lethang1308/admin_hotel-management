@@ -42,3 +42,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Uploaded hotel media (stored outside source control)
+/uploads/

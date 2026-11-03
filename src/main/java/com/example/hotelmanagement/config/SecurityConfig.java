@@ -148,7 +148,8 @@ public class SecurityConfig {
                                             "/admin/assets/**",
                                             "/admin/css/**",
                                             "/admin/js/**",
-                                            "/admin/images/**")
+                                            "/admin/images/**",
+                                            "/media/hotel/**")
                                     .permitAll();
                             auth.requestMatchers("/actuator/health", "/actuator/health/**")
                                     .permitAll();

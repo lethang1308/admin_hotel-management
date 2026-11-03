@@ -22,6 +22,9 @@ logging:
     com.example.hotelmanagement: INFO
 
 app:
+  hotel:
+    calendar-enabled: false
+    inventory-days: 30
   identity:
     encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
   jwt:

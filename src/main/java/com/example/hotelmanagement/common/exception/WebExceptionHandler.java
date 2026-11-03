@@ -46,6 +46,15 @@ public class WebExceptionHandler {
         return "admin/error";
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public String handleOversizedUpload(HttpServletResponse response, Model model) {
+        response.setStatus(413);
+        model.addAttribute("status", 413);
+        model.addAttribute("errorTitle", messages.text("hotel.error.uploadTitle"));
+        model.addAttribute("errorMessage", messages.text("hotel.error.imageFile"));
+        return "admin/error";
+    }
+
     @ExceptionHandler(Exception.class)
     public String handleUnexpected(
             Exception ex, HttpServletRequest request, HttpServletResponse response, Model model) {
