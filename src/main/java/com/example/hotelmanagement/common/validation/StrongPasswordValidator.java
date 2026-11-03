@@ -13,7 +13,8 @@ public class StrongPasswordValidator implements ConstraintValidator<StrongPasswo
         if (value == null || value.isBlank()) {
             return false;
         }
-        if (value.length() < MIN_LENGTH || value.length() > MAX_LENGTH) {
+        if (value.length() < MIN_LENGTH
+                || value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_LENGTH) {
             return false;
         }
         boolean hasLetter = false;

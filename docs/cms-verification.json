@@ -1,0 +1,32 @@
+{
+  "module": "CMS account and permission management",
+  "maven_package": "BUILD SUCCESS",
+  "default_suite": {
+    "tests": 44,
+    "passed": 43,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "skip_reason": "Opt-in MySQL migration test executed separately"
+  },
+  "mvc_acceptance_tests": 13,
+  "browser_verified": [
+    "employee profile read/update in Vietnamese",
+    "role and permission matrix",
+    "audit list and field diff"
+  ],
+  "browser_database": "isolated H2 preview; no production account mutations",
+  "screenshots": [
+    "screenshots/cms-employee.jpg",
+    "screenshots/cms-permissions.jpg",
+    "screenshots/cms-audit-diff.jpg"
+  ],
+  "mysql_opt_in_suite": {
+    "tests": 3,
+    "passed": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "unique_tests_verified": 44,
+  "local_backend_health": "UP"
+}

@@ -6,11 +6,10 @@ import com.example.hotelmanagement.modules.user.entity.User;
 import com.example.hotelmanagement.modules.user.entity.UserStatus;
 import com.example.hotelmanagement.modules.user.repository.UserRepository;
 import com.example.hotelmanagement.security.authorization.SecurityConstants;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,6 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -31,13 +34,18 @@ public class AdminDataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
+    private final com.example.hotelmanagement.modules.user.service.ProfileProvisioningService
+            profiles;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         AppProperties.Seed.Admin adminProps = appProperties.getSeed().getAdmin();
-        if (!StringUtils.hasText(adminProps.getEmail()) || !StringUtils.hasText(adminProps.getPassword())) {
-            log.warn("Admin seed is enabled, but ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD is missing. Skipping seed.");
+        if (!StringUtils.hasText(adminProps.getEmail())
+                || !StringUtils.hasText(adminProps.getPassword())) {
+            log.warn(
+                    "Admin seed is enabled, but ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD is missing."
+                            + " Skipping seed.");
             return;
         }
         if (adminProps.getPassword().trim().length() < 8) {
@@ -57,17 +65,19 @@ public class AdminDataInitializer implements ApplicationRunner {
         roles.add(adminRole);
         roles.add(userRole);
 
-        User admin = User.builder()
-                .fullName(StringUtils.hasText(adminProps.getFullName())
-                        ? adminProps.getFullName().trim()
-                        : "System Administrator")
-                .email(normalizedEmail)
-                .passwordHash(passwordEncoder.encode(adminProps.getPassword()))
-                .status(UserStatus.ACTIVE)
-                .roles(roles)
-                .build();
+        User admin =
+                User.builder()
+                        .fullName(
+                                StringUtils.hasText(adminProps.getFullName())
+                                        ? adminProps.getFullName().trim()
+                                        : "System Administrator")
+                        .email(normalizedEmail)
+                        .passwordHash(passwordEncoder.encode(adminProps.getPassword()))
+                        .status(UserStatus.ACTIVE)
+                        .roles(roles)
+                        .build();
 
-        userRepository.save(admin);
+        profiles.provision(userRepository.save(admin));
         log.info("Development initial ADMIN account created for email: {}", normalizedEmail);
     }
 }

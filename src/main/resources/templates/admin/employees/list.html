@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+ th:replace="~{admin/layouts/main :: layout(#{cms.employees.title}, ~{::#cms-page}, ~{})}"><body><div id="cms-page">
+ <div class="page-heading"><h3 th:text="#{cms.employees.title}"></h3></div>
+
+<p class="text-muted" th:text="#{cms.employees.subtitle}"></p><div class="card"><div class="card-body">
+<form method="get" th:action="@{/admin/employees}" class="row g-3 align-items-end mb-4">
+ <div class="col-md-5"><label for="search" class="form-label" th:text="#{cms.search}"></label><input id="search" class="form-control" name="search" th:value="${search}" maxlength="150" th:placeholder="#{cms.employees.search}"></div>
+ <div class="col-md-3"><label for="status" class="form-label" th:text="#{cms.status}"></label><select id="status" name="status" class="form-select"><option value="" th:text="#{cms.all}"></option><option th:each="s:${statuses}" th:value="${s}" th:selected="${s == selectedStatus}" th:text="#{${'admin.status.' + s.name()}}"></option></select></div>
+ <div class="col-md-2"><label for="position" class="form-label" th:text="#{cms.position}"></label><input id="position" class="form-control" name="position" th:value="${position}" maxlength="100"></div>
+ <div class="col-md-2"><button class="btn btn-primary w-100" th:text="#{cms.filter}"></button></div>
+</form>
+<div class="d-flex justify-content-end mb-3"><a class="btn btn-primary" th:href="@{/admin/employees/create}"><i class="bi bi-person-plus me-2" aria-hidden="true"></i><span th:text="#{cms.employees.create}"></span></a></div>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr>
+ <th th:text="#{cms.employeeCode}"></th><th th:text="#{cms.fullName}"></th><th th:text="#{cms.contact}"></th><th th:text="#{cms.position}"></th><th th:text="#{cms.status}"></th><th th:text="#{cms.lastLogin}"></th><th th:text="#{cms.actions}"></th>
+</tr></thead><tbody>
+<tr th:if="${#lists.isEmpty(pageData.items)}"><td colspan="7" class="text-center py-5 text-muted" th:text="#{cms.empty}"></td></tr>
+<tr th:each="e:${pageData.items}"><td class="text-nowrap fw-semibold" th:text="${e.employeeCode}"></td><td th:text="${e.fullName}"></td><td><div th:text="${e.email}"></div><small class="text-muted" th:text="${e.phone}"></small></td><td th:text="${e.position}"></td><td><span class="badge" th:classappend="${e.status.name() == 'ACTIVE' ? 'bg-light-success' : 'bg-light-danger'}" th:text="#{${'admin.status.' + e.status.name()}}"></span></td><td class="small text-nowrap" th:text="${@dateFmt.local(e.lastLoginAt)}"></td><td><a class="btn btn-sm btn-outline-primary" th:href="@{/admin/employees/{id}/edit(id=${e.id})}" th:text="#{cms.manage}"></a></td></tr>
+</tbody></table></div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3"><span class="text-muted" th:text="#{cms.pageInfo(${pageData.page + 1},${pageData.totalPages == 0 ? 1 : pageData.totalPages},${pageData.totalElements})}"></span><nav th:if="${pageData.totalPages > 1}" class="d-flex gap-2" th:attr="aria-label=#{cms.pagination}"><a class="btn btn-outline-secondary btn-sm" th:if="${pageData.hasPrevious}" th:href="@{/admin/employees(page=${pageData.page - 1},size=${pageData.size},search=${search},status=${selectedStatus},position=${position})}" th:text="#{cms.previous}"></a><a class="btn btn-outline-secondary btn-sm" th:if="${pageData.hasNext}" th:href="@{/admin/employees(page=${pageData.page + 1},size=${pageData.size},search=${search},status=${selectedStatus},position=${position})}" th:text="#{cms.next}"></a></nav></div></div></div>
+</div></body></html>

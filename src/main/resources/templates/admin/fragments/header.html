@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <header th:fragment="header">
     <nav class="navbar navbar-expand navbar-light navbar-top">
@@ -33,7 +33,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center justify-content-between"
                                    th:classappend="${currentLang != 'en'} ? 'active fw-bold' : ''"
-                                   th:href="@{${currentPath}(lang='vi')}">
+                                   th:href="${langViUrl}">
                                     <span>🇻🇳 Tiếng Việt</span>
                                     <i class="bi bi-check2" th:if="${currentLang != 'en'}"></i>
                                 </a>
@@ -41,7 +41,7 @@
                             <li>
                                 <a class="dropdown-item d-flex align-items-center justify-content-between"
                                    th:classappend="${currentLang == 'en'} ? 'active fw-bold' : ''"
-                                   th:href="@{${currentPath}(lang='en')}">
+                                   th:href="${langEnUrl}">
                                     <span>🇬🇧 English</span>
                                     <i class="bi bi-check2" th:if="${currentLang == 'en'}"></i>
                                 </a>
@@ -49,7 +49,7 @@
                         </ul>
                     </li>
 
-                    <li class="nav-item me-2">
+                    <li class="nav-item me-2" sec:authorize="hasRole('ADMIN')">
                         <a class="nav-link text-gray-600" th:href="@{/swagger-ui.html}" target="_blank"
                            rel="noopener" title="OpenAPI Documentation">
                             <i class="bi bi-braces fs-5"></i>
@@ -84,17 +84,17 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" th:href="@{/admin/users}">
+                            <a class="dropdown-item" sec:authorize="hasRole('ADMIN') and hasAuthority('account.manage')" th:href="@{/admin/users}">
                                 <i class="icon-mid bi bi-people me-2"></i> <span th:text="#{admin.nav.users}">User Management</span>
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" th:href="@{/admin/roles}">
+                            <a class="dropdown-item" sec:authorize="hasRole('ADMIN') and hasAuthority('role.manage')" th:href="@{/admin/roles}">
                                 <i class="icon-mid bi bi-shield-lock me-2"></i> <span th:text="#{admin.nav.roles}">Roles &amp; RBAC</span>
                             </a>
                         </li>
                         <li>
-                            <hr class="dropdown-divider">
+                            <a class="dropdown-item" sec:authorize="hasAuthority('profile.manage.own')" th:href="@{/admin/profile/password}"><i class="bi bi-key me-2"></i><span th:text="#{cms.changePassword}"></span></a><hr class="dropdown-divider">
                         </li>
                         <li>
                             <form th:action="@{/admin/logout}" method="post" class="m-0">

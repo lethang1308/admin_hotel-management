@@ -4,7 +4,9 @@ import com.example.hotelmanagement.common.pagination.PageResponse;
 import com.example.hotelmanagement.modules.role.service.RoleService;
 import com.example.hotelmanagement.modules.user.dto.UserResponse;
 import com.example.hotelmanagement.modules.user.service.UserService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,11 +24,16 @@ public class AdminHomeController {
     }
 
     @GetMapping("/admin")
-    public String dashboard(Model model) {
+    public String dashboard(
+            Model model, org.springframework.security.core.Authentication authentication) {
+        if (authentication.getAuthorities().stream()
+                .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN")))
+            return "redirect:/admin/receptionist";
         long totalUsers = userService.countAllUsers();
         long activeUsers = userService.countActiveUsers();
         int totalRoles = roleService.findAll().size();
-        PageResponse<UserResponse> recentUsers = userService.getUsers(0, 5, "createdAt,desc", null, null, null);
+        PageResponse<UserResponse> recentUsers =
+                userService.getUsers(0, 5, "createdAt,desc", null, null, null);
 
         model.addAttribute("totalUsers", totalUsers);
         model.addAttribute("activeUsers", activeUsers);
@@ -34,5 +41,10 @@ public class AdminHomeController {
         model.addAttribute("totalRoles", totalRoles);
         model.addAttribute("recentUsers", recentUsers.getItems());
         return "admin/dashboard";
+    }
+
+    @GetMapping("/admin/receptionist")
+    public String receptionist() {
+        return "admin/receptionist";
     }
 }

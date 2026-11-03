@@ -14,7 +14,7 @@ import com.example.hotelmanagement.modules.role.repository.RoleRepository;
 import com.example.hotelmanagement.modules.user.entity.User;
 import com.example.hotelmanagement.modules.user.entity.UserStatus;
 import com.example.hotelmanagement.modules.user.repository.UserRepository;
-import java.util.Set;
+
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,49 +27,49 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.Set;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminWebSecurityIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    @Autowired
-    private RoleRepository roleRepository;
+    @Autowired private UserRepository userRepository;
 
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    @Autowired private RoleRepository roleRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    @Autowired private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setUpUsers() {
-        refreshTokenRepository.deleteAll();
-        userRepository.deleteAll();
+        com.example.hotelmanagement.support.CmsTestData.clear(jdbc);
 
         Role adminRole = roleRepository.findByCode("ADMIN").orElseThrow();
         Role userRole = roleRepository.findByCode("USER").orElseThrow();
 
-        userRepository.save(User.builder()
-                .fullName("Portal Admin")
-                .email("portal.admin@example.com")
-                .passwordHash(passwordEncoder.encode("AdminPortal123"))
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(adminRole, userRole))
-                .build());
+        userRepository.save(
+                User.builder()
+                        .fullName("Portal Admin")
+                        .email("portal.admin@example.com")
+                        .passwordHash(passwordEncoder.encode("AdminPortal123"))
+                        .status(UserStatus.ACTIVE)
+                        .roles(Set.of(adminRole, userRole))
+                        .build());
 
-        userRepository.save(User.builder()
-                .fullName("Regular User")
-                .email("regular.user@example.com")
-                .passwordHash(passwordEncoder.encode("RegularPass123"))
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(userRole))
-                .build());
+        userRepository.save(
+                User.builder()
+                        .fullName("Regular User")
+                        .email("regular.user@example.com")
+                        .passwordHash(passwordEncoder.encode("RegularPass123"))
+                        .status(UserStatus.ACTIVE)
+                        .roles(Set.of(userRole))
+                        .build());
     }
 
     @Test
@@ -81,21 +81,25 @@ class AdminWebSecurityIntegrationTest {
 
     @Test
     void shouldEnforceCsrfOnAdminFormLogin() throws Exception {
-        mockMvc.perform(post("/admin/login")
-                        .param("email", "portal.admin@example.com")
-                        .param("password", "AdminPortal123"))
+        mockMvc.perform(
+                        post("/admin/login")
+                                .param("email", "portal.admin@example.com")
+                                .param("password", "AdminPortal123"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void shouldAllowAdminFormLoginAndRenderDashboardAndUserListInDefaultVietnameseAndEnglish() throws Exception {
-        MvcResult loginResult = mockMvc.perform(post("/admin/login")
-                        .with(csrf())
-                        .param("email", "portal.admin@example.com")
-                        .param("password", "AdminPortal123"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin"))
-                .andReturn();
+    void shouldAllowAdminFormLoginAndRenderDashboardAndUserListInDefaultVietnameseAndEnglish()
+            throws Exception {
+        MvcResult loginResult =
+                mockMvc.perform(
+                                post("/admin/login")
+                                        .with(csrf())
+                                        .param("email", "portal.admin@example.com")
+                                        .param("password", "AdminPortal123"))
+                        .andExpect(status().is3xxRedirection())
+                        .andExpect(redirectedUrl("/admin"))
+                        .andReturn();
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
@@ -116,10 +120,13 @@ class AdminWebSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Tạo tài khoản mới")));
 
-        User adminUser = userRepository.findByEmailIgnoreCase("portal.admin@example.com").orElseThrow();
+        User adminUser =
+                userRepository.findByEmailIgnoreCase("portal.admin@example.com").orElseThrow();
         mockMvc.perform(get("/admin/users/" + adminUser.getId() + "/edit").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(Matchers.containsString("Hồ sơ &amp; Phân quyền vai trò")));
+                .andExpect(
+                        content()
+                                .string(Matchers.containsString("Hồ sơ &amp; Phân quyền vai trò")));
 
         mockMvc.perform(get("/admin/roles").session(session))
                 .andExpect(status().isOk())
@@ -155,11 +162,9 @@ class AdminWebSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString("Log in")));
 
-        mockMvc.perform(get("/admin/assets/compiled/css/app.css"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/admin/assets/compiled/css/app.css")).andExpect(status().isOk());
 
-        mockMvc.perform(get("/admin/assets/compiled/js/app.js"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/admin/assets/compiled/js/app.js")).andExpect(status().isOk());
 
         mockMvc.perform(get("/admin/assets/static/images/logo/logo.svg"))
                 .andExpect(status().isOk());
@@ -168,25 +173,23 @@ class AdminWebSecurityIntegrationTest {
     @Test
     void shouldDenyNonAdminUserFromLoggingIntoAdminPortalOrAccessingAdminRoutes() throws Exception {
         // Non-admin form login is rejected and logged out immediately
-        mockMvc.perform(post("/admin/login")
-                        .with(csrf())
-                        .param("email", "regular.user@example.com")
-                        .param("password", "RegularPass123"))
+        mockMvc.perform(
+                        post("/admin/login")
+                                .with(csrf())
+                                .param("email", "regular.user@example.com")
+                                .param("password", "RegularPass123"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/login?accessDenied=true"));
 
         // Direct session access with ROLE_USER gets 403 Forbidden
-        mockMvc.perform(get("/admin/users")
-                        .with(user("regular.user@example.com").roles("USER")))
+        mockMvc.perform(get("/admin/users").with(user("regular.user@example.com").roles("USER")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void shouldExposeHealthCheckAndOpenApiDocsInTestProfile() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/actuator/health")).andExpect(status().isOk());
 
-        mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
     }
 }

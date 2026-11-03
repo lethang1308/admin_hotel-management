@@ -2,6 +2,7 @@ package com.example.hotelmanagement.modules.user.entity;
 
 import com.example.hotelmanagement.common.audit.BaseAuditableEntity;
 import com.example.hotelmanagement.modules.role.entity.Role;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,14 +15,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-import java.util.LinkedHashSet;
-import java.util.Set;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import org.hibernate.annotations.BatchSize;
+
+import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -42,6 +47,28 @@ public class User extends BaseAuditableEntity {
     @Column(name = "email", nullable = false, unique = true, length = 150)
     private String email;
 
+    @Column(name = "phone", unique = true, length = 20)
+    private String phone;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
+    @Column(name = "security_version", nullable = false)
+    @Builder.Default
+    private Long securityVersion = 0L;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -54,14 +81,17 @@ public class User extends BaseAuditableEntity {
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
     @BatchSize(size = 50)
     @Builder.Default
     private Set<Role> roles = new LinkedHashSet<>();
 
     public boolean isActive() {
-        return this.status == UserStatus.ACTIVE;
+        Instant now = Instant.now();
+        boolean expiredLock =
+                status == UserStatus.LOCKED && lockedUntil != null && !lockedUntil.isAfter(now);
+        return (status == UserStatus.ACTIVE || expiredLock)
+                && (lockedUntil == null || !lockedUntil.isAfter(now));
     }
 
     public boolean hasRole(String roleCode) {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content, pageScripts)">
+<html lang="en" th:lang="${currentLang}" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content, pageScripts)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/app-dark.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/compiled/css/iconly.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-identity.css}">
 </head>
 
 <body>
@@ -47,6 +48,7 @@
 <script th:src="@{/admin/assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js}"></script>
 <script th:src="@{/admin/assets/compiled/js/app.js}"></script>
 <script th:src="@{/admin/assets/static/js/admin-custom.js}"></script>
+<script th:src="@{/admin/assets/static/js/cms-identity.js}"></script>
 <th:block th:if="${pageScripts != null}" th:replace="${pageScripts}"/>
 </body>
 </html>

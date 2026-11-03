@@ -7,15 +7,15 @@ import com.example.hotelmanagement.security.authentication.CustomUserDetails;
 import com.example.hotelmanagement.security.authentication.CustomUserDetailsService;
 import com.example.hotelmanagement.security.authorization.SecurityConstants;
 import com.nimbusds.jwt.JWTClaimsSet;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,7 +25,12 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
 import tools.jackson.databind.json.JsonMapper;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 
 @Slf4j
 @Component
@@ -40,18 +45,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String contextPath = request.getContextPath() != null ? request.getContextPath() : "";
         String requestUri = request.getRequestURI() != null ? request.getRequestURI() : "";
-        String path = requestUri.startsWith(contextPath) ? requestUri.substring(contextPath.length()) : requestUri;
+        String path =
+                requestUri.startsWith(contextPath)
+                        ? requestUri.substring(contextPath.length())
+                        : requestUri;
         return !path.startsWith("/api/");
     }
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         String authHeader = request.getHeader(SecurityConstants.AUTH_HEADER);
-        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith(SecurityConstants.BEARER_PREFIX)) {
+        if (!StringUtils.hasText(authHeader)
+                || !authHeader.startsWith(SecurityConstants.BEARER_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -62,17 +69,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = claims.getLongClaim("uid");
             CustomUserDetails userDetails = userDetailsService.loadUserById(userId);
 
+            Object versionClaim = claims.getClaim("sv");
+            long tokenVersion =
+                    versionClaim == null
+                            ? 0
+                            : versionClaim instanceof Number n ? n.longValue() : -1;
+            if (tokenVersion != userDetails.getSecurityVersion()) {
+                throw new UnauthorizedException(
+                        ErrorCode.TOKEN_REVOKED, "Account credentials have changed");
+            }
+
             if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
                 SecurityContextHolder.clearContext();
                 writeDisabledResponse(request, response);
                 return;
             }
 
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-            );
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (UnauthorizedException ex) {
@@ -86,12 +101,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void writeDisabledResponse(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        ProblemDetail problem = ProblemDetailFactory.build(
-                ErrorCode.ACCOUNT_DISABLED,
-                ErrorCode.ACCOUNT_DISABLED.getDefaultMessage(),
-                request
-        );
+    private void writeDisabledResponse(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        ProblemDetail problem =
+                ProblemDetailFactory.build(
+                        ErrorCode.ACCOUNT_DISABLED,
+                        ErrorCode.ACCOUNT_DISABLED.getDefaultMessage(),
+                        request);
         response.setStatus(ErrorCode.ACCOUNT_DISABLED.getStatus().value());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

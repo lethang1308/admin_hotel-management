@@ -76,6 +76,8 @@
                     <span th:text="#{admin.login.logoutSuccess}">You have signed out securely.</span>
                 </div>
 
+                <div th:if="${param.expired}" class="alert alert-light-warning" role="alert" th:text="#{cms.sessionExpired}"></div>
+                <div th:if="${param.passwordChanged}" class="alert alert-light-success" role="status" th:text="#{cms.passwordChanged}"></div>
                 <form th:action="@{/admin/login}" method="post">
                     <input type="hidden" th:if="${_csrf != null}"
                            th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import com.example.hotelmanagement.common.exception.BusinessException;
 import com.example.hotelmanagement.common.exception.DuplicateResourceException;
 import com.example.hotelmanagement.config.AppProperties;
-import com.example.hotelmanagement.modules.auth.repository.RefreshTokenRepository;
 import com.example.hotelmanagement.modules.role.entity.Role;
 import com.example.hotelmanagement.modules.role.service.RoleService;
 import com.example.hotelmanagement.modules.user.dto.CreateUserRequest;
@@ -20,9 +19,7 @@ import com.example.hotelmanagement.modules.user.entity.User;
 import com.example.hotelmanagement.modules.user.entity.UserStatus;
 import com.example.hotelmanagement.modules.user.mapper.UserMapper;
 import com.example.hotelmanagement.modules.user.repository.UserRepository;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,35 +27,45 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+import java.util.Set;
+
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
 
-    @Mock
-    private RoleService roleService;
+    @Mock private RoleService roleService;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+    @Mock private CredentialRevocationService revocations;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @Mock private ProfileProvisioningService profiles;
+    @Mock private com.example.hotelmanagement.modules.audit.service.AuditLogService audit;
+
+    @Mock private PasswordEncoder passwordEncoder;
+
+    @Mock private com.example.hotelmanagement.common.util.CmsMessages messages;
 
     private UserService userService;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient()
+                .when(messages.error(any(String.class)))
+                .thenAnswer(inv -> new BusinessException(inv.getArgument(0, String.class)));
         AppProperties appProperties = new AppProperties();
         appProperties.getPagination().setMaxPageSize(50);
-        userService = new UserService(
-                userRepository,
-                roleService,
-                refreshTokenRepository,
-                passwordEncoder,
-                new UserMapper(),
-                appProperties
-        );
+        userService =
+                new UserService(
+                        userRepository,
+                        roleService,
+                        revocations,
+                        profiles,
+                        audit,
+                        passwordEncoder,
+                        new UserMapper(),
+                        appProperties,
+                        messages);
     }
 
     @Test
@@ -67,17 +74,20 @@ class UserServiceTest {
         when(userRepository.existsByEmailIgnoreCase("new.user@example.com")).thenReturn(false);
         when(roleService.resolveRoles(any(), eq("USER"))).thenReturn(Set.of(userRole));
         when(passwordEncoder.encode("SecurePass123")).thenReturn("$2a$10$encoded");
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
-            User u = inv.getArgument(0);
-            u.setId(10L);
-            return u;
-        });
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(
+                        inv -> {
+                            User u = inv.getArgument(0);
+                            u.setId(10L);
+                            return u;
+                        });
 
-        CreateUserRequest request = CreateUserRequest.builder()
-                .fullName("  New User ")
-                .email("  NEW.USER@Example.com ")
-                .password("SecurePass123")
-                .build();
+        CreateUserRequest request =
+                CreateUserRequest.builder()
+                        .fullName("  New User ")
+                        .email("  NEW.USER@Example.com ")
+                        .password("SecurePass123")
+                        .build();
 
         UserResponse created = userService.createUser(request);
 
@@ -92,11 +102,12 @@ class UserServiceTest {
     void shouldRejectDuplicateEmailOnCreate() {
         when(userRepository.existsByEmailIgnoreCase("dup@example.com")).thenReturn(true);
 
-        CreateUserRequest request = CreateUserRequest.builder()
-                .fullName("Dup User")
-                .email("dup@example.com")
-                .password("SecurePass123")
-                .build();
+        CreateUserRequest request =
+                CreateUserRequest.builder()
+                        .fullName("Dup User")
+                        .email("dup@example.com")
+                        .password("SecurePass123")
+                        .build();
 
         assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(DuplicateResourceException.class);
@@ -104,41 +115,43 @@ class UserServiceTest {
 
     @Test
     void shouldPreventAdminFromDeactivatingOwnAccount() {
-        User admin = User.builder()
-                .id(1L)
-                .fullName("Admin")
-                .email("admin@example.com")
-                .status(UserStatus.ACTIVE)
-                .build();
+        User admin =
+                User.builder()
+                        .id(1L)
+                        .fullName("Admin")
+                        .email("admin@example.com")
+                        .status(UserStatus.ACTIVE)
+                        .build();
         when(userRepository.findWithRolesById(1L)).thenReturn(Optional.of(admin));
 
-        assertThatThrownBy(() -> userService.updateUserStatus(
-                1L,
-                new UpdateUserStatusRequest(UserStatus.INACTIVE),
-                "admin@example.com"
-        )).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(
+                        () ->
+                                userService.updateUserStatus(
+                                        1L,
+                                        new UpdateUserStatusRequest(UserStatus.INACTIVE),
+                                        "admin@example.com"))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
     void shouldRevokeRefreshTokensWhenDeactivatingAnotherUser() {
-        User target = User.builder()
-                .id(5L)
-                .fullName("Staff")
-                .email("staff@example.com")
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(Role.builder().code("USER").build()))
-                .build();
+        User target =
+                User.builder()
+                        .id(5L)
+                        .fullName("Staff")
+                        .email("staff@example.com")
+                        .status(UserStatus.ACTIVE)
+                        .roles(Set.of(Role.builder().code("USER").build()))
+                        .build();
         when(userRepository.findWithRolesById(5L)).thenReturn(Optional.of(target));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UserResponse response = userService.updateUserStatus(
-                5L,
-                new UpdateUserStatusRequest(UserStatus.INACTIVE),
-                "admin@example.com"
-        );
+        UserResponse response =
+                userService.updateUserStatus(
+                        5L, new UpdateUserStatusRequest(UserStatus.INACTIVE), "admin@example.com");
 
         assertThat(response.getStatus()).isEqualTo(UserStatus.INACTIVE);
-        verify(refreshTokenRepository).revokeAllActiveByUserId(eq(5L), any(Instant.class));
+        verify(revocations).revoke(target);
     }
 
     @Test

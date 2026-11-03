@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+ th:replace="~{admin/layouts/main :: layout(#{cms.reception.title}, ~{::#cms-page}, ~{})}"><body><div id="cms-page">
+ <div class="page-heading"><h3 th:text="#{cms.reception.title}"></h3></div>
+<p class="text-muted" th:text="#{cms.reception.subtitle}"></p><div class="card"><div class="card-body"><h4 th:text="#{cms.quickAccess}"></h4><div class="d-flex flex-wrap gap-3 mt-3"><a class="btn btn-primary" sec:authorize="hasAuthority('customer.read')" th:href="@{/admin/customers}" th:text="#{cms.customers.title}"></a><a class="btn btn-outline-primary" sec:authorize="hasAuthority('profile.manage.own')" th:href="@{/admin/profile/password}" th:text="#{cms.changePassword}"></a><a class="btn btn-outline-primary" sec:authorize="hasAuthority('account.manage')" th:href="@{/admin/employees}" th:text="#{cms.employees.title}"></a></div></div></div>
+</div></body></html>

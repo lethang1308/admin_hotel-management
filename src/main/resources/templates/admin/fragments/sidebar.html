@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
 <div id="sidebar" th:fragment="sidebar">
     <div class="sidebar-wrapper active">
@@ -56,7 +56,7 @@
 
                 <li class="sidebar-title" th:text="#{admin.sidebar.identityAccess}">Identity &amp; Access</li>
 
-                <li class="sidebar-item has-sub"
+                <li class="sidebar-item has-sub" sec:authorize="hasRole('ADMIN') and hasAuthority('account.manage')"
                     th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active' : ''">
                     <a href="#" class="sidebar-link">
                         <i class="bi bi-people-fill"></i>
@@ -76,6 +76,7 @@
                 </li>
 
                 <li class="sidebar-item"
+                    sec:authorize="hasRole('ADMIN') and hasAuthority('role.manage')"
                     th:classappend="${currentPath != null and currentPath.startsWith('/admin/roles')} ? 'active' : ''">
                     <a th:href="@{/admin/roles}" class="sidebar-link">
                         <i class="bi bi-shield-lock-fill"></i>
@@ -83,16 +84,20 @@
                     </a>
                 </li>
 
-                <li class="sidebar-title" th:text="#{admin.sidebar.developerSystem}">Developer &amp; System</li>
+                <li class="sidebar-item" sec:authorize="hasAuthority('account.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/employees')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/employees}"><i class="bi bi-person-badge" aria-hidden="true"></i><span th:text="#{cms.employees.title}"></span></a></li>
+<li class="sidebar-item" sec:authorize="hasAuthority('customer.read')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/customers')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/customers}"><i class="bi bi-people" aria-hidden="true"></i><span th:text="#{cms.customers.title}"></span></a></li>
+<li class="sidebar-item" sec:authorize="hasAuthority('audit.read')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/audit-logs')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/audit-logs}"><i class="bi bi-clock-history" aria-hidden="true"></i><span th:text="#{cms.audit.title}"></span></a></li>
+<li class="sidebar-item" sec:authorize="hasAuthority('profile.manage.own')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/profile/password')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/profile/password}"><i class="bi bi-key" aria-hidden="true"></i><span th:text="#{cms.changePassword}"></span></a></li>
+<li class="sidebar-title" sec:authorize="hasRole('ADMIN')" th:text="#{admin.sidebar.developerSystem}">Developer &amp; System</li>
 
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasRole('ADMIN')">
                     <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener" class="sidebar-link">
                         <i class="bi bi-file-earmark-code-fill"></i>
                         <span th:text="#{admin.nav.swagger}">OpenAPI / Swagger</span>
                     </a>
                 </li>
 
-                <li class="sidebar-item">
+                <li class="sidebar-item" sec:authorize="hasRole('ADMIN')">
                     <a th:href="@{/actuator/health}" target="_blank" rel="noopener" class="sidebar-link">
                         <i class="bi bi-heart-pulse-fill"></i>
                         <span th:text="#{admin.nav.health}">System Health</span>

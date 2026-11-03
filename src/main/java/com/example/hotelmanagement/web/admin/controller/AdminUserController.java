@@ -10,10 +10,11 @@ import com.example.hotelmanagement.modules.user.dto.UserResponse;
 import com.example.hotelmanagement.modules.user.entity.UserStatus;
 import com.example.hotelmanagement.modules.user.service.UserService;
 import com.example.hotelmanagement.security.authorization.SecurityConstants;
+
 import jakarta.validation.Valid;
-import java.util.LinkedHashSet;
-import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,13 +27,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 @Controller
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize(
+        "hasRole('ADMIN') and hasAuthority('account.manage')")
 public class AdminUserController {
 
     private final UserService userService;
     private final RoleService roleService;
+    private final com.example.hotelmanagement.common.util.CmsMessages messages;
 
     @GetMapping
     public String listUsers(
@@ -42,11 +49,11 @@ public class AdminUserController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(required = false) String role,
-            Model model
-    ) {
+            Model model) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(1, size), 100);
-        PageResponse<UserResponse> userPage = userService.getUsers(safePage, safeSize, sort, search, status, role);
+        PageResponse<UserResponse> userPage =
+                userService.getUsers(safePage, safeSize, sort, search, status, role);
 
         model.addAttribute("userPage", userPage);
         model.addAttribute("allRoles", roleService.findAll());
@@ -60,10 +67,11 @@ public class AdminUserController {
 
     @GetMapping("/create")
     public String createForm(Model model) {
-        CreateUserRequest form = CreateUserRequest.builder()
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(SecurityConstants.ROLE_USER))
-                .build();
+        CreateUserRequest form =
+                CreateUserRequest.builder()
+                        .status(UserStatus.ACTIVE)
+                        .roles(Set.of(SecurityConstants.ROLE_USER))
+                        .build();
         model.addAttribute("userForm", form);
         model.addAttribute("allRoles", roleService.findAll());
         model.addAttribute("statuses", UserStatus.values());
@@ -75,8 +83,7 @@ public class AdminUserController {
             @Valid @ModelAttribute("userForm") CreateUserRequest form,
             BindingResult bindingResult,
             Model model,
-            RedirectAttributes redirectAttributes
-    ) {
+            RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("allRoles", roleService.findAll());
             model.addAttribute("statuses", UserStatus.values());
@@ -84,7 +91,7 @@ public class AdminUserController {
         }
         try {
             userService.createUser(form);
-            redirectAttributes.addFlashAttribute("successMessage", "User account created successfully.");
+            redirectAttributes.addFlashAttribute("successMessage", messages.text("cms.saved"));
             return "redirect:/admin/users";
         } catch (AppException ex) {
             model.addAttribute("formError", ex.getMessage());
@@ -97,11 +104,12 @@ public class AdminUserController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         UserResponse user = userService.getUserById(id);
-        UpdateUserRequest form = UpdateUserRequest.builder()
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .roles(new LinkedHashSet<>(user.getRoles()))
-                .build();
+        UpdateUserRequest form =
+                UpdateUserRequest.builder()
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .roles(new LinkedHashSet<>(user.getRoles()))
+                        .build();
 
         model.addAttribute("targetUser", user);
         model.addAttribute("userForm", form);
@@ -116,8 +124,7 @@ public class AdminUserController {
             BindingResult bindingResult,
             Authentication authentication,
             Model model,
-            RedirectAttributes redirectAttributes
-    ) {
+            RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("targetUser", userService.getUserById(id));
             model.addAttribute("allRoles", roleService.findAll());
@@ -126,7 +133,7 @@ public class AdminUserController {
         try {
             String actorEmail = authentication != null ? authentication.getName() : null;
             userService.updateUser(id, form, actorEmail);
-            redirectAttributes.addFlashAttribute("successMessage", "User account updated successfully.");
+            redirectAttributes.addFlashAttribute("successMessage", messages.text("cms.saved"));
             return "redirect:/admin/users";
         } catch (AppException ex) {
             model.addAttribute("targetUser", userService.getUserById(id));
@@ -141,12 +148,11 @@ public class AdminUserController {
             @PathVariable Long id,
             @RequestParam UserStatus status,
             Authentication authentication,
-            RedirectAttributes redirectAttributes
-    ) {
+            RedirectAttributes redirectAttributes) {
         try {
             String actorEmail = authentication != null ? authentication.getName() : null;
             userService.updateUserStatus(id, new UpdateUserStatusRequest(status), actorEmail);
-            redirectAttributes.addFlashAttribute("successMessage", "User status updated to " + status + ".");
+            redirectAttributes.addFlashAttribute("successMessage", messages.text("cms.saved"));
         } catch (AppException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

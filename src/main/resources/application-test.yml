@@ -22,6 +22,8 @@ logging:
     com.example.hotelmanagement: INFO
 
 app:
+  identity:
+    encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
   jwt:
     allow-ephemeral-dev-key: true
     access-expiration-seconds: 900

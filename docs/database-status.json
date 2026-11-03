@@ -2,21 +2,22 @@
   "database": "hotel_management",
   "mysql_version": "8.0.30",
   "application_tables": 59,
-  "columns_matched_to_design": 614,
+  "columns_matched_to_design": 618,
   "foreign_keys": 125,
-  "check_constraints": 79,
-  "flyway_version": "3",
+  "check_constraints": 80,
+  "flyway_version": "4",
   "v2_checksum_matches": true,
-  "auth_data_unchanged_during_verification": {
-    "users": true,
-    "original_roles": true,
-    "user_roles": true,
-    "refresh_tokens": true
-  },
   "permissions": 45,
   "roles": [
     "ADMIN",
     "USER",
     "RECEPTIONIST"
-  ]
+  ],
+  "schema_extensions": "V4 CMS security_version and encrypted customer identity columns",
+  "historical_v3_auth_preservation": {
+    "users": true,
+    "original_roles": true,
+    "user_roles": true,
+    "refresh_tokens": true
+  }
 }

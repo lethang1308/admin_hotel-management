@@ -2,14 +2,18 @@ package com.example.hotelmanagement.web.admin.controller;
 
 import com.example.hotelmanagement.config.AppProperties;
 import com.example.hotelmanagement.security.authentication.CustomUserDetails;
+
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Locale;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+
+import java.util.Locale;
 
 @ControllerAdvice(basePackages = "com.example.hotelmanagement.web")
 @RequiredArgsConstructor
@@ -19,16 +23,25 @@ public class AdminModelAdvice {
 
     @ModelAttribute
     public void populateCommonAdminAttributes(
-            Model model,
-            HttpServletRequest request,
-            Authentication authentication
-    ) {
+            Model model, HttpServletRequest request, Authentication authentication) {
         model.addAttribute("appName", appProperties.getName());
         model.addAttribute("currentPath", request.getRequestURI());
+        var languageUrl =
+                org.springframework.web.util.UriComponentsBuilder.fromPath(request.getRequestURI())
+                        .query("GET".equals(request.getMethod()) ? request.getQueryString() : null);
+        model.addAttribute(
+                "langViUrl",
+                languageUrl.cloneBuilder().replaceQueryParam("lang", "vi").build().toUriString());
+        model.addAttribute(
+                "langEnUrl",
+                languageUrl.cloneBuilder().replaceQueryParam("lang", "en").build().toUriString());
         model.addAttribute("currentYear", java.time.Year.now().getValue());
 
         Locale currentLocale = LocaleContextHolder.getLocale();
-        String currentLang = (currentLocale != null && "en".equalsIgnoreCase(currentLocale.getLanguage())) ? "en" : "vi";
+        String currentLang =
+                (currentLocale != null && "en".equalsIgnoreCase(currentLocale.getLanguage()))
+                        ? "en"
+                        : "vi";
         model.addAttribute("currentLang", currentLang);
 
         if (authentication != null && authentication.isAuthenticated()) {

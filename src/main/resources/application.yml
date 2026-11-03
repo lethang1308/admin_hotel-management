@@ -74,6 +74,8 @@ logging:
     level: "%5p [cid:%X{correlationId:-none}]"
 
 app:
+  identity:
+    encryption-key: ${CUSTOMER_DOCUMENT_ENCRYPTION_KEY:}
   name: ${APP_NAME:Enterprise Management System}
   jwt:
     signing-key: ${JWT_SIGNING_KEY:${JWT_SECRET:}}
