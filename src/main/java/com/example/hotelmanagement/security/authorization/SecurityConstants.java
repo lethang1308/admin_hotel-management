@@ -3,6 +3,7 @@ package com.example.hotelmanagement.security.authorization;
 public final class SecurityConstants {
 
     public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_RECEPTIONIST = "RECEPTIONIST";
     public static final String ROLE_USER = "USER";
 
     public static final String BEARER_PREFIX = "Bearer ";
