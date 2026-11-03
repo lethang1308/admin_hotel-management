@@ -55,6 +55,15 @@ public class WebExceptionHandler {
         return "admin/error";
     }
 
+    @ExceptionHandler(org.springframework.beans.InvalidPropertyException.class)
+    public String handleBindingLimit(HttpServletResponse response, Model model) {
+        response.setStatus(400);
+        model.addAttribute("status", 400);
+        model.addAttribute("errorTitle", messages.text("cms.error.inputTitle"));
+        model.addAttribute("errorMessage", messages.text("price.error.form"));
+        return "admin/error";
+    }
+
     @ExceptionHandler(Exception.class)
     public String handleUnexpected(
             Exception ex, HttpServletRequest request, HttpServletResponse response, Model model) {

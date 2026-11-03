@@ -40,6 +40,8 @@ spring:
     fallback-to-system-locale: false
 
 server:
+  tomcat:
+    max-part-count: 64
   port: ${SERVER_PORT:8080}
   error:
     include-stacktrace: never

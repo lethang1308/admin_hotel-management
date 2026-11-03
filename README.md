@@ -166,4 +166,5 @@ Xem thư mục [`docs/`](docs/):
 
 - [CMS_ADMIN.md](docs/CMS_ADMIN.md): trang quản trị Admin
 - [CMS_HOTEL_ROOMS.md](docs/CMS_HOTEL_ROOMS.md): quản lý khách sạn, phòng
+- [CMS_PRICING_PROMOTIONS.md](docs/CMS_PRICING_PROMOTIONS.md): giá phòng, voucher, cọc/hủy/phụ phí và mô phỏng báo giá
 - [DATABASE.md](docs/DATABASE.md): cấu trúc cơ sở dữ liệu

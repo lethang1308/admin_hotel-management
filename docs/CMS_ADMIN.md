@@ -98,3 +98,7 @@ Kết quả nghiệm thu: Maven package BUILD SUCCESS; 43 kiểm thử mặc đ�
 ## Phần 2 – Khách sạn và phòng
 
 Đã bổ sung cấu hình khách sạn, tầng/khu vực, tiện nghi, loại phòng/ảnh, phòng vật lý, bảo trì, hồ sơ lịch sử và sơ đồ phòng. Xem [hướng dẫn phần 2](CMS_HOTEL_ROOMS.md). Flyway bổ sung migration V5, không thay đổi V1–V4.
+
+## Phần 3 – Giá phòng và khuyến mãi
+
+Đã bổ sung bảng giá, quy tắc cuối tuần/mùa/dài ngày, voucher, chính sách cọc/hủy/phụ phí và bộ mô phỏng theo từng đêm. Xem [hướng dẫn phần 3](CMS_PRICING_PROMOTIONS.md). Không cần migration mới.

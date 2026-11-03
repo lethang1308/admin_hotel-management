@@ -6,10 +6,18 @@ public final class CmsTestData {
     private CmsTestData() {}
 
     public static void clear(JdbcTemplate jdbc) {
-        jdbc.update("UPDATE hotel_settings SET updated_by=NULL");
+        jdbc.update(
+                "UPDATE hotel_settings SET updated_by=NULL, default_deposit_policy_id=(SELECT id"
+                    + " FROM deposit_policies WHERE code='CMS_NO_DEPOSIT' AND version=1),"
+                    + " default_cancellation_policy_id=(SELECT id FROM cancellation_policies WHERE"
+                    + " code='CMS_FLEXIBLE' AND version=1), default_tax_percent=0");
         for (String table :
                 new String[] {
                     "audit_logs",
+                    "voucher_redemptions",
+                    "voucher_room_types",
+                    "vouchers",
+                    "booking_charges",
                     "room_night_claims",
                     "booking_room_nights",
                     "room_allocations",
@@ -23,6 +31,9 @@ public final class CmsTestData {
                     "room_type_images",
                     "room_type_amenities",
                     "room_type_inventory",
+                    "rate_rule_room_types",
+                    "rate_rules",
+                    "surcharge_policies",
                     "account_tokens",
                     "employees",
                     "customers",
@@ -30,6 +41,17 @@ public final class CmsTestData {
                     "user_roles",
                     "users"
                 }) jdbc.update("DELETE FROM " + table);
+        jdbc.update(
+                "DELETE FROM cancellation_policy_rules WHERE cancellation_policy_id NOT IN (SELECT"
+                    + " id FROM cancellation_policies WHERE code='CMS_FLEXIBLE' AND version=1)");
+        jdbc.update("DELETE FROM cancellation_policies WHERE code<>'CMS_FLEXIBLE' OR version<>1");
+        jdbc.update("DELETE FROM deposit_policies WHERE code<>'CMS_NO_DEPOSIT' OR version<>1");
+        jdbc.update(
+                "UPDATE cancellation_policies SET is_active=true WHERE code='CMS_FLEXIBLE' AND"
+                        + " version=1");
+        jdbc.update(
+                "UPDATE deposit_policies SET is_active=true WHERE code='CMS_NO_DEPOSIT' AND"
+                        + " version=1");
         jdbc.update("DELETE FROM room_types WHERE code NOT IN ('STD','SUP','DLX','SUI','VIP')");
         jdbc.update(
                 "DELETE FROM amenities WHERE code NOT IN"
