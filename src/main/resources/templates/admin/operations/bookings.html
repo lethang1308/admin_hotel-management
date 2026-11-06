@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.bookings},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.bookings}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" th:href="@{/admin/bookings/calendar}" th:text="#{ops.calendar}" ></a><a class="btn btn-primary" th:href="@{/admin/bookings/create}" th:text="#{ops.newBooking}" sec:authorize="hasAuthority('booking.create')"></a></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<form method="get" th:action="@{/admin/bookings}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.bookingSearch}"></span>
+  <input class="form-control" type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}" maxlength="150">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.status}"></span><select class="form-select" name="status" >
+<option value="" th:text="#{cms.all}"></option>
+<option value="PENDING" th:selected="${(param.status != null ? param.status[0] : '') == 'PENDING'}" th:text="#{ops.PENDING}"></option>
+<option value="CONFIRMED" th:selected="${(param.status != null ? param.status[0] : '') == 'CONFIRMED'}" th:text="#{ops.CONFIRMED}"></option>
+<option value="CHECKED_IN" th:selected="${(param.status != null ? param.status[0] : '') == 'CHECKED_IN'}" th:text="#{ops.CHECKED_IN}"></option>
+<option value="CHECKED_OUT" th:selected="${(param.status != null ? param.status[0] : '') == 'CHECKED_OUT'}" th:text="#{ops.CHECKED_OUT}"></option>
+<option value="CANCELLED" th:selected="${(param.status != null ? param.status[0] : '') == 'CANCELLED'}" th:text="#{ops.CANCELLED}"></option>
+<option value="REJECTED" th:selected="${(param.status != null ? param.status[0] : '') == 'REJECTED'}" th:text="#{ops.REJECTED}"></option>
+<option value="NO_SHOW" th:selected="${(param.status != null ? param.status[0] : '') == 'NO_SHOW'}" th:text="#{ops.NO_SHOW}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.source}"></span><select class="form-select" name="source" >
+<option value="" th:text="#{cms.all}"></option>
+<option value="ONLINE" th:selected="${(param.source != null ? param.source[0] : '') == 'ONLINE'}" th:text="#{ops.ONLINE}"></option>
+<option value="PHONE" th:selected="${(param.source != null ? param.source[0] : '') == 'PHONE'}" th:text="#{ops.PHONE}"></option>
+<option value="WALK_IN" th:selected="${(param.source != null ? param.source[0] : '') == 'WALK_IN'}" th:text="#{ops.WALK_IN}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.roomType}"></span><select class="form-select" name="typeId" >
+<option value="" th:text="#{cms.all}"></option>
+<option th:each="t:${types}" th:value="${t.id('id')}" th:text="${t.s('name')}" th:selected="${t.s('id') == (param.typeId != null ? param.typeId[0] : '')}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${param.from != null ? param.from[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${param.until != null ? param.until[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.bookingCode}"></th><th scope="col" th:text="#{ops.customer}"></th><th scope="col" th:text="#{ops.source}"></th><th scope="col" th:text="#{ops.from}"></th><th scope="col" th:text="#{ops.until}"></th><th scope="col" th:text="#{ops.status}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(page.rows)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${page.rows}"><td><a th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="${r.s('booking_code')}"></a></td><td><span th:text="${r.data['contact_name']}"></span><small class='d-block text-muted'><span th:text="${r.data['contact_phone']}"></span></small></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('source')}}"></span></td><td><span th:text="${r.data['arrival']}"></span></td><td><span th:text="${r.data['departure']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td></tr>
+</tbody></table>
+</div><nav class="d-flex gap-2 align-items-center mt-3" th:aria-label="#{ops.paging}">
+  <a th:if="${previous != null}" th:href="${previous}" class="btn btn-light" th:text="#{ops.previous}"></a>
+  <span class="text-muted" th:text="${(page.index + 1) + ' · ' + page.total}"></span>
+  <a th:if="${next != null}" th:href="${next}" class="btn btn-light" th:text="#{ops.next}"></a>
+</nav>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

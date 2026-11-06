@@ -102,3 +102,7 @@ Kết quả nghiệm thu: Maven package BUILD SUCCESS; 43 kiểm thử mặc đ�
 ## Phần 3 – Giá phòng và khuyến mãi
 
 Đã bổ sung bảng giá, quy tắc cuối tuần/mùa/dài ngày, voucher, chính sách cọc/hủy/phụ phí và bộ mô phỏng theo từng đêm. Xem [hướng dẫn phần 3](CMS_PRICING_PROMOTIONS.md). Không cần migration mới.
+
+## Phần 4 – Đặt phòng và vận hành
+
+Xem [hướng dẫn đặt phòng, dịch vụ, thanh toán và hóa đơn](CMS_BOOKINGS.md). Flyway V6 lưu phiên bản giá từng đêm và chống ghi lặp lượt sử dụng dịch vụ.

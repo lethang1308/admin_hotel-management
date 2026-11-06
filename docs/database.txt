@@ -600,6 +600,7 @@ Table booking_room_nights {
   id bigint [pk, increment]
   booking_room_id bigint [not null, ref: > booking_rooms.id]
   stay_date date [not null]
+  revision int [not null, default: 1]
   inventory_room_type_id bigint [not null, note: 'Loại phòng bị trừ tồn kho đêm này, cho phép nâng hạng/đổi loại từ một ngày nhất định.']
   rate_rule_id bigint [ref: > rate_rules.id]
   length_discount_rule_id bigint [ref: > rate_rules.id]
@@ -612,7 +613,7 @@ Table booking_room_nights {
   stay_status varchar(20) [not null, default: 'PLANNED']
   recognized_at datetime(6) [note: 'Thời điểm ghi nhận doanh thu đêm thực tế đã lưu trú.']
   created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
-  indexes { (booking_room_id, stay_date) [unique]
+  indexes { (booking_room_id, stay_date, revision) [unique]
     (inventory_room_type_id, stay_date)
     (stay_date, stay_status)
     (id, booking_room_id) [unique]
@@ -835,7 +836,9 @@ Table service_usages {
   voided_at datetime(6)
   void_reason varchar(500)
   notes varchar(500)
+  request_key varchar(24)
   indexes { (booking_id, used_at)
+    (booking_id, request_key) [unique]
     (service_id, used_at)
     (id, booking_id) [unique]
   }

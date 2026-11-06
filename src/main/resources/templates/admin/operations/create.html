@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.newBooking},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.newBooking}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" th:href="@{/admin/bookings}" th:text="#{ops.bookings}" ></a></div>
+</div><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.customer}"></h5></div>
+  <div class="card-body">
+
+<form method="get" th:action="@{/admin/bookings/create}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.findCustomer}"></span>
+  <input class="form-control" type="search" name="customerSearch" th:value="${param.customerSearch != null ? param.customerSearch[0] : ''}" maxlength="150">
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form>
+<div th:if="${customers != null}" class="table-responsive">
+<table class="table mb-3"><thead><tr><th>ID</th><th th:text="#{ops.customer}"></th><th th:text="#{ops.phone}"></th><th></th></tr></thead>
+<tbody><tr th:each="r:${customers}"><td th:text="${r.id('id')}"></td><td th:text="${r.s('full_name')}"></td><td th:text="${r.s('phone')}"></td>
+<td><button type="button" class="btn btn-sm btn-outline-primary" data-select-customer th:data-id="${r.id('id')}" th:text="#{ops.select}"></button></td></tr></tbody></table>
+</div>
+  </div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<form method="post" th:action="@{/admin/bookings/create}"  id="booking-create">
+<input type="hidden" name="requestKey" th:value="${f.requestKey}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.customerId}"></span>
+  <input class="form-control" type="number" name="customerId" th:value="${f.customerId}" min="1">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.name}"></span>
+  <input class="form-control" type="text" name="name" th:value="${f.name}" maxlength="150">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.phone}"></span>
+  <input class="form-control" type="tel" name="phone" th:value="${f.phone}" maxlength="20">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.email}"></span>
+  <input class="form-control" type="email" name="email" th:value="${f.email}" maxlength="150">
+</label></div></div><div class="mt-3"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.source}"></span><select class="form-select" name="source" >
+
+<option value="WALK_IN" th:selected="${(f.source) == 'WALK_IN'}" th:text="#{ops.WALK_IN}"></option>
+<option value="PHONE" th:selected="${(f.source) == 'PHONE'}" th:text="#{ops.PHONE}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.voucher}"></span>
+  <input class="form-control" type="text" name="voucher" th:value="${f.voucher}" maxlength="50">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.notes}"></span>
+  <input class="form-control" type="text" name="notes" th:value="${f.notes}" maxlength="1000">
+</label></div></div></div>
+<h5 class="mt-4" th:text="#{ops.roomLines}"></h5>
+<div id="booking-rooms"><div class="border rounded p-3 mb-2" data-room th:each="room:${f.rooms}">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.roomType}"></span><select class="form-select" name="typeId" required>
+
+<option th:each="t:${types}" th:value="${t.id('id')}" th:text="${t.s('name')}" th:selected="${t.id('id') == room.typeId}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${room.from}" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${room.to}" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.adults}"></span>
+  <input class="form-control" type="number" name="adults" th:value="${room.adults}" min="1" max="100" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.children}"></span>
+  <input class="form-control" type="number" name="children" th:value="${room.children}" min="0" max="99" required>
+</label></div>
+<div class="col-12 col-md"><button type="button" class="btn btn-outline-danger" data-remove-room th:text="#{ops.remove}"></button></div></div>
+</div></div>
+<template id="booking-room-template"><div class="border rounded p-3 mb-2" data-room><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.roomType}"></span><select class="form-select" name="typeId" required>
+
+<option th:each="t:${types}" th:value="${t.id('id')}" th:text="${t.s('name')}" ></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from"  required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until"  required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.adults}"></span>
+  <input class="form-control" type="number" name="adults"  min="1" max="100" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.children}"></span>
+  <input class="form-control" type="number" name="children"  min="0" max="99" required>
+</label></div>
+<div class="col-12 col-md"><button type="button" class="btn btn-outline-danger" data-remove-room th:text="#{ops.remove}"></button></div></div></div></template>
+<button type="button" class="btn btn-outline-primary mt-2" data-add-room th:text="#{ops.addRoom}"></button>
+<button class="btn btn-primary mt-2" th:text="#{ops.preview}" ></button>
+<div th:if="${quote != null}" class="alert alert-light-primary mt-3" id="booking-quote">
+  <h5 th:text="#{ops.preview}"></h5>
+  <p><span th:text="#{ops.total}"></span> <strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(quote.totalAmount,1,'COMMA',0,'POINT')+' VND'}"></span></strong> ·
+  <span th:text="#{ops.deposit}"></span> <strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(quote.depositRequired,1,'COMMA',0,'POINT')+' VND'}"></span></strong></p>
+  <p class="small" th:text="#{ops.quoteHint}"></p>
+  <div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.roomType}"></th><th scope="col" th:text="#{ops.discount}"></th><th scope="col" th:text="#{ops.total}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(quote.nights)}"><td colspan="5" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${quote.nights}"><td><span th:text="${r.line}"></span></td><td><span th:text="${r.date}"></span></td><td><span th:text="${r.roomTypeName}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.voucherDiscountAmount,1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.totalAmount,1,'COMMA',0,'POINT')+' VND'}"></span></td></tr>
+</tbody></table>
+</div>
+  <button class="btn btn-success mt-3" name="expected" th:value="${quote.totalAmount}" data-save-booking th:text="#{ops.hold}"></button>
+</div>
+</form>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"><script th:src="@{/admin/assets/static/js/cms-operations.js}"></script></th:block>
+</body>
+</html>

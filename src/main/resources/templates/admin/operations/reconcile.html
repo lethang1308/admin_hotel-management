@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.reconcile},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.reconcile}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<form method="get" th:action="@{/admin/inventory/reconcile}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${from}" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${until}" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form><p class="text-muted" th:text="#{ops.reconcileHint}"></p><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.roomType}"></th><th scope="col" th:text="#{ops.held}"></th><th scope="col" th:text="#{ops.reserved}"></th><th scope="col" th:text="#{ops.blocked}"></th><th scope="col" th:text="#{ops.claims}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(rows)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${rows}"><td><span th:text="${r.data['stay_date']}"></span></td><td><span th:text="${r.data['type_name']}"></span></td><td><span th:text="${r.data['held_rooms']}"></span>/<span th:text="${r.data['expected_held']}"></span></td><td><span th:text="${r.data['reserved_rooms']}"></span>/<span th:text="${r.data['expected_reserved']}"></span></td><td><span th:text="${r.data['blocked_rooms']}"></span>/<span th:text="${r.data['expected_blocked']}"></span></td><td><span th:text="${r.data['allocated']}"></span></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

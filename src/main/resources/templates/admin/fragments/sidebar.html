@@ -99,6 +99,32 @@
                     </a>
                 </li>
 
+<li class="sidebar-title" sec:authorize="hasRole('ADMIN') or hasAnyAuthority('booking.read.any','booking.cancel.any','service.read','service.manage','payment.collect','payment.refund','invoice.manage')" th:text="#{ops.workspace}"></li>
+<li class="sidebar-item" sec:authorize="hasAuthority('booking.read.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/bookings') and currentPath != '/admin/bookings/calendar'} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/bookings}"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span th:text="#{ops.bookings}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAuthority('booking.read.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/bookings/calendar')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/bookings/calendar}"><i class="bi bi-calendar-week" aria-hidden="true"></i><span th:text="#{ops.calendar}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAuthority('booking.cancel.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/cancellations')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/cancellations}"><i class="bi bi-calendar-x" aria-hidden="true"></i><span th:text="#{ops.cancellations}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAnyAuthority('service.read','service.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/services')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/services}"><i class="bi bi-cup-hot" aria-hidden="true"></i><span th:text="#{ops.services}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/payments')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/payments}"><i class="bi bi-wallet2" aria-hidden="true"></i><span th:text="#{ops.payments}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/debts')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/debts}"><i class="bi bi-receipt" aria-hidden="true"></i><span th:text="#{ops.debts}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasAuthority('invoice.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/invoices')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/invoices}"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span th:text="#{ops.invoices}"></span></a>
+</li>
+<li class="sidebar-item" sec:authorize="hasRole('ADMIN')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/inventory/reconcile')} ? 'active' : ''">
+    <a class="sidebar-link" th:href="@{/admin/inventory/reconcile}"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span th:text="#{ops.reconcile}"></span></a>
+</li>
+
                 <li class="sidebar-item" sec:authorize="hasRole('ADMIN')">
                     <a th:href="@{/actuator/health}" target="_blank" rel="noopener" class="sidebar-link">
                         <i class="bi bi-heart-pulse-fill"></i>

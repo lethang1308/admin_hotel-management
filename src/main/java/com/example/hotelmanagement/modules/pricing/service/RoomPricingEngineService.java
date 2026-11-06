@@ -47,6 +47,17 @@ public class RoomPricingEngineService {
         }
     }
 
+    @PreAuthorize("hasAuthority('booking.update.any')")
+    public Quote quoteAdjustment(Stay stay) {
+        try {
+            return calculator.quote(
+                    new Request(List.of(stay), null, null, Instant.now(), null),
+                    context(null, null));
+        } catch (PricingCalculationException e) {
+            throw messages.error(e.getMessage());
+        }
+    }
+
     @PreAuthorize("hasAnyAuthority('pricing.manage','room.read')")
     public PricingModels.Calendar calendar(LocalDate from, LocalDate until) {
         try {

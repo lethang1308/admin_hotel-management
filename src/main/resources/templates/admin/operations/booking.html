@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.booking},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.booking}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" th:href="@{/admin/bookings}" th:text="#{ops.bookings}" ></a><a class="btn btn-outline-primary" th:href="@{/admin/bookings/calendar}" th:text="#{ops.calendar}" ></a></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<h4 th:text="${d.booking.s('booking_code')}"></h4>
+<p><strong th:text="${d.booking.s('contact_name')}"></strong> · <span th:text="${d.booking.s('contact_phone')}"></span> · <span th:text="${d.booking.s('contact_email')}"></span></p>
+<p><span th:text="#{ops.source}"></span> <span class="badge bg-light-primary" th:text="#{${'ops.'+d.booking.s('source')}}"></span> · <span class="badge bg-light-primary" th:text="#{${'ops.'+d.booking.s('status')}}"></span></p>
+<p th:if="${d.booking.s('special_requests') != null}" th:text="${d.booking.s('special_requests')}"></p>
+<p th:if="${d.booking.s('status') == 'PENDING'}"><span th:text="#{ops.holdUntil}"></span> <span th:text="${d.booking.time('hold_expires_at')}"></span></p>
+<div class="row g-3 my-2"><div class="col-6 col-lg"><small class="text-muted d-block" th:text="#{ops.total}"></small><strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(d.balance.total,1,'COMMA',0,'POINT')+' VND'}"></span></strong></div><div class="col-6 col-lg"><small class="text-muted d-block" th:text="#{ops.deposit}"></small><strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(d.booking.money('deposit_required_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></strong></div><div class="col-6 col-lg"><small class="text-muted d-block" th:text="#{ops.paid}"></small><strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(d.balance.net(),1,'COMMA',0,'POINT')+' VND'}"></span></strong></div><div class="col-6 col-lg"><small class="text-muted d-block" th:text="#{ops.balance}"></small><strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(d.balance.debt(),1,'COMMA',0,'POINT')+' VND'}"></span></strong></div><div class="col-6 col-lg"><small class="text-muted d-block" th:text="#{ops.refundDue}"></small><strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(d.balance.refundDue(),1,'COMMA',0,'POINT')+' VND'}"></span></strong></div></div><details class="border rounded p-3 mb-3" th:if="${d.booking.s('status') == 'PENDING'}" sec:authorize="hasAuthority('booking.confirm')">
+<summary class="fw-semibold" th:text="#{ops.confirm}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/confirm(id=${d.booking.id('id')})}"  >
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.confirm}" ></button></div></div>
+</form></div>
+</details><details class="border rounded p-3 mb-3" th:if="${d.booking.s('status') == 'PENDING'}" sec:authorize="hasAuthority('booking.confirm')">
+<summary class="fw-semibold" th:text="#{ops.reject}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/reject(id=${d.booking.id('id')})}"  >
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.reject}" ></button></div></div>
+</form></div>
+</details><details class="border rounded p-3 mb-3" th:if="${d.booking.s('status') == 'PENDING' or d.booking.s('status') == 'CONFIRMED'}" sec:authorize="hasAuthority('booking.cancel.any')">
+<summary class="fw-semibold" th:text="#{ops.cancelBooking}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/cancel(id=${d.booking.id('id')})}"  >
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.cancelBooking}" ></button></div></div>
+</form></div>
+</details>
+  </div>
+</div><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.roomLines}"></h5></div>
+  <div class="card-body">
+<article class="border rounded p-3 mb-3" th:each="room:${d.rooms}">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+    <h5 th:text="${'#'+room.n('line_number')+' · '+room.s('room_type_name_snapshot')+' · '+(room.s('room_number') ?: '—')}"></h5>
+    <span class="badge bg-light-primary" th:text="#{${'ops.'+room.s('status')}}"></span>
+  </div>
+  <p class="text-muted"><span th:text="${room.s('check_in_date')+' → '+room.s('check_out_date')}"></span> ·
+    <span th:text="#{ops.adults}"></span> <span th:text="${room.n('adults')}"></span> · <span th:text="#{ops.children}"></span> <span th:text="${room.n('children')}"></span></p>
+  <details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CONFIRMED' and room.date('check_in_date') == today}" sec:authorize="hasAuthority('booking.checkin')">
+<summary class="fw-semibold" th:text="#{ops.checkin}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/checkin(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><div class="border rounded p-2 mb-2" th:each="i:${#numbers.sequence(1,room.n('adults')+room.n('children'))}" th:with="adult=${i<=room.n('adults')}">
+<input type="hidden" name="guestType" th:value="${adult ? 'ADULT' : 'CHILD'}">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.guestName}"></span>
+  <input class="form-control" type="text" name="guestName"  maxlength="150" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block"><span th:text="#{ops.documentType}"></span>
+<select name="documentType" class="form-select"><option value="ID" th:text="#{ops.nationalId}"></option><option value="PASSPORT" th:text="#{ops.passport}"></option><option value="OTHER" th:text="#{ops.other}"></option></select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.documentNumber}"></span>
+  <input class="form-control" type="text" name="documentNumber"  maxlength="60" autocomplete="off" th:required="${adult}">
+</label></div></div>
+</div><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.checkin}" ></button></div></div>
+</form></div>
+</details>
+  <details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CHECKED_IN'}" sec:authorize="hasAuthority('booking.checkout')">
+<summary class="fw-semibold" th:text="#{ops.checkout}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/checkout(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.checkout}" ></button></div></div>
+</form></div>
+</details>
+  <details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CONFIRMED' and !today.isBefore(room.date('check_in_date'))}" sec:authorize="hasAuthority('booking.no_show')">
+<summary class="fw-semibold" th:text="#{ops.NO_SHOW}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/no-show(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.NO_SHOW}" ></button></div></div>
+</form></div>
+</details>
+  <details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CONFIRMED' or room.s('status') == 'PENDING'}" sec:authorize="hasAuthority('booking.cancel.any')">
+<summary class="fw-semibold" th:text="#{ops.cancelRoom}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/cancel(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.cancelRoom}" ></button></div></div>
+</form></div>
+</details>
+  <details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CONFIRMED' or room.s('status') == 'CHECKED_IN'}" sec:authorize="hasAuthority('booking.update.any')">
+<summary class="fw-semibold" th:text="#{ops.requestChange}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/changes(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.kind}"></span><select class="form-select" name="kind" >
+
+<option value="CHANGE_DATES"  th:text="#{ops.CHANGE_DATES}"></option>
+<option value="EXTEND"  th:text="#{ops.EXTEND}"></option>
+<option value="SHORTEN"  th:text="#{ops.SHORTEN}"></option>
+<option value="CHANGE_ROOM"  th:text="#{ops.CHANGE_ROOM}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${room.date('check_in_date')}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${room.date('check_out_date')}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.physicalRoom}"></span><select class="form-select" name="physicalRoom" >
+<option value="" th:text="#{ops.automatic}"></option>
+<option th:each="p:${physical}" th:value="${p.id('id')}" th:text="${p.s('room_number')+' · '+p.s('type_name')}" ></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.previewChange}" ></button></div></div>
+</form></div>
+</details><details class="border rounded p-3 mb-3" th:if="${room.s('status') == 'CHECKED_IN' and services != null and !#lists.isEmpty(services)}" sec:authorize="hasAuthority('service.usage.manage')">
+<summary class="fw-semibold" th:text="#{ops.useService}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/services(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="line" th:value="${room.id('id')}"><input type="hidden" name="key" th:value="${serviceKeys.get(room.id('id'))}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.services}"></span><select class="form-select" name="service" required>
+
+<option th:each="x:${services}" th:value="${x.id('id')}" th:text="${x.s('name')+' · '+x.s('unit_price')+' / '+x.s('unit')}" ></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.quantity}"></span>
+  <input class="form-control" type="number" name="quantity" th:value="${1}" min="0.001" step="0.001" max="9999999.999" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.notes}"></span>
+  <input class="form-control" type="text" name="notes"  maxlength="500">
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.save}" ></button></div></div>
+</form></div>
+</details>
+</article>
+  </div>
+</div><div class="card mb-4" id="changes">
+  <div class="card-header pb-2"><h5 th:text="#{ops.changes}"></h5></div>
+  <div class="card-body">
+<article class="border rounded p-3 mb-2" th:each="c:${d.changes}">
+<div class="d-flex justify-content-between gap-2"><h6><span th:text="${'#'+c.row.id('id')}"></span> · <span class="badge bg-light-primary" th:text="#{${'ops.'+c.row.s('change_type')}}"></span></h6><span class="badge bg-light-primary" th:text="#{${'ops.'+c.row.s('status')}}"></span></div>
+<p class="small"><span th:text="#{ops.line}"></span> <span th:text="${c.row.id('booking_room_id')}"></span> ·
+<span th:text="${c.requested.change.from}"></span> → <span th:text="${c.requested.change.to}"></span>
+<span th:if="${c.requested.change.physicalRoom != null}" th:text="${'#'+c.requested.change.physicalRoom}"></span></p>
+<p th:text="${c.row.s('reason')}"></p>
+<p><span th:text="#{ops.difference}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(c.requested.difference,1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.fee}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(c.requested.fee,1,'COMMA',0,'POINT')+' VND'}"></span></p>
+<p th:if="${c.row.s('response_note') != null}" th:text="${c.row.s('response_note')}"></p>
+<form method="post" th:action="@{/admin/bookings/{id}/changes/{change}/decide(id=${d.booking.id('id')},change=${c.row.id('id')})}" sec:authorize="hasAuthority('booking.update.any')" th:if="${c.row.s('status') == 'PENDING'}">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><div class="d-flex gap-2"><button class="btn btn-primary mt-2" th:text="#{ops.approve}" name="approve" value="true"></button><button class="btn btn-outline-danger mt-2" th:text="#{ops.reject}" name="approve" value="false"></button></div></div></div>
+</form>
+</article><p th:if="${#lists.isEmpty(d.changes)}" class="text-muted" th:text="#{cms.empty}"></p>
+  </div>
+</div><div class="card mb-4" id="usages">
+  <div class="card-header pb-2"><h5 th:text="#{ops.usages}"></h5></div>
+  <div class="card-body">
+<div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.services}"></th><th scope="col" th:text="#{ops.quantity}"></th><th scope="col" th:text="#{ops.unitPrice}"></th><th scope="col" th:text="#{ops.tax}"></th><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.reason}"></th><th scope="col" th:text="#{ops.actions}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.usages)}"><td colspan="8" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.usages}"><td><span th:text="${r.data['service_name_snapshot']}"></span></td><td><span th:text="${r.data['quantity']}"></span> <span th:text="${r.data['unit_snapshot']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('unit_price_snapshot'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span th:text="${r.data['tax_percent_snapshot']}"></span></td><td><span th:text="${r.data['used_at']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td><td><span th:text="${r.data['void_reason']}"></span></td><td><form method="post" th:action="@{/admin/bookings/{id}/services/{usage}/void(id=${d.booking.id('id')},usage=${r.id('id')})}" sec:authorize="hasAuthority('service.usage.manage')" th:if="${r.s('status') == 'ACTIVE'}">
+<label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label><button class="btn btn-outline-danger mt-2" th:text="#{ops.void}" ></button>
+</form></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div><div class="card mb-4" id="payments">
+  <div class="card-header pb-2"><h5 th:text="#{ops.payments}"></h5></div>
+  <div class="card-body">
+<details class="border rounded p-3 mb-3" sec:authorize="hasAuthority('payment.collect')">
+<summary class="fw-semibold" th:text="#{ops.collect}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/collect(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="key" th:value="${requestKey}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.kind}"></span><select class="form-select" name="kind" >
+
+<option value="PAYMENT"  th:text="#{ops.PAYMENT}"></option>
+<option value="DEPOSIT"  th:text="#{ops.DEPOSIT}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.method}"></span><select class="form-select" name="method" >
+
+<option value="BANK_TRANSFER"  th:text="#{ops.BANK_TRANSFER}"></option>
+<option value="CASH"  th:text="#{ops.CASH}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.total}"></span>
+  <input class="form-control" type="number" name="amount"  min="1" step="1" max="9999999999999" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" >
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.collect}" ></button></div></div>
+</form></div>
+</details><details class="border rounded p-3 mb-3" th:if="${d.balance.refundDue().signum() > 0}" sec:authorize="hasAuthority('payment.refund')">
+<summary class="fw-semibold" th:text="#{ops.refund}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/refund(id=${d.booking.id('id')})}"  >
+<input type="hidden" name="key" th:value="${refundKey}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.originalPayment}"></span><select class="form-select" name="parent" required>
+
+<option th:if="${p.s('kind') != 'REFUND' and p.s('status') == 'SUCCEEDED'}" th:each="p:${d.payments}" th:value="${p.id('id')}" th:text="${p.s('transaction_code')+' · '+p.s('amount')}" ></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.method}"></span><select class="form-select" name="method" >
+
+<option value="BANK_TRANSFER"  th:text="#{ops.BANK_TRANSFER}"></option>
+<option value="CASH"  th:text="#{ops.CASH}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.total}"></span>
+  <input class="form-control" type="number" name="amount"  min="1" step="1" max="9999999999999" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.refund}" ></button></div></div>
+</form></div>
+</details><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.code}"></th><th scope="col" th:text="#{ops.kind}"></th><th scope="col" th:text="#{ops.method}"></th><th scope="col" th:text="#{ops.total}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.reason}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.payments)}"><td colspan="7" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.payments}"><td><span th:text="${r.data['transaction_code']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('kind')}}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('method')}}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td><td><span th:text="${r.data['paid_at']}"></span></td><td><span th:text="${r.data['reason']}"></span></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div><div class="card mb-4" id="invoices">
+  <div class="card-header pb-2"><h5 th:text="#{ops.invoices}"></h5></div>
+  <div class="card-body">
+<div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.code}"></th><th scope="col" th:text="#{ops.revision}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.total}"></th><th scope="col" th:text="#{ops.day}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.invoices)}"><td colspan="5" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.invoices}"><td><a sec:authorize="hasAuthority('invoice.manage')" th:href="@{/admin/invoices/{id}(id=${r.id('id')})}" th:text="${r.s('invoice_number')}"></a>
+<span sec:authorize="!hasAuthority('invoice.manage')" th:text="${r.s('invoice_number')}"></span></td><td><span th:text="${r.data['revision']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('total_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span th:text="${r.data['issued_at']}"></span></td></tr>
+</tbody></table>
+</div><details class="border rounded p-3 mb-3" th:if="${#lists.contains({'CHECKED_OUT','CANCELLED','NO_SHOW','REJECTED'},d.booking.s('status'))}" sec:authorize="hasAuthority('invoice.manage')">
+<summary class="fw-semibold" th:text="#{ops.issue}"></summary>
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/invoice(id=${d.booking.id('id')})}"  >
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.address}"></span>
+  <input class="form-control" type="text" name="address"  maxlength="500">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.taxCode}"></span>
+  <input class="form-control" type="text" name="taxCode"  maxlength="30">
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.issue}" ></button></div></div>
+</form></div>
+</details>
+  </div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.nights}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.revision}"></th><th scope="col" th:text="#{ops.base}"></th><th scope="col" th:text="#{ops.nightlyRate}"></th><th scope="col" th:text="#{ops.discount}"></th><th scope="col" th:text="#{ops.total}"></th><th scope="col" th:text="#{ops.inventory}"></th><th scope="col" th:text="#{ops.status}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.nights)}"><td colspan="9" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.nights}"><td><span th:text="${r.data['line_number']}"></span></td><td><span th:text="${r.data['stay_date']}"></span></td><td><span th:text="${r.data['revision']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('base_price_snapshot'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('nightly_rate'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('length_discount_amount'),1,'COMMA',0,'POINT')+' VND'}"></span> + <span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('voucher_discount_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('net_room_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('inventory_state')}}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('stay_status')}}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.allocations}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.physicalRoom}"></th><th scope="col" th:text="#{ops.from}"></th><th scope="col" th:text="#{ops.until}"></th><th scope="col" th:text="#{ops.actualArrival}"></th><th scope="col" th:text="#{ops.actualDeparture}"></th><th scope="col" th:text="#{ops.status}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.allocations)}"><td colspan="7" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.allocations}"><td><span th:text="${r.data['line_number']}"></span></td><td><span th:text="${r.data['room_number']}"></span></td><td><span th:text="${r.data['from_date']}"></span></td><td><span th:text="${r.data['to_date']}"></span></td><td><span th:text="${r.data['occupied_from_at']}"></span></td><td><span th:text="${r.data['occupied_until_at']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.guests}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.guestName}"></th><th scope="col" th:text="#{ops.kind}"></th><th scope="col" th:text="#{ops.documentType}"></th><th scope="col" th:text="#{ops.actualArrival}"></th><th scope="col" th:text="#{ops.actualDeparture}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.guests)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.guests}"><td><span th:text="${r.data['line_number']}"></span></td><td><span th:text="${r.data['full_name']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('guest_type')}}"></span></td><td><span th:text="${r.data['document_type']}"></span></td><td><span th:text="${r.data['arrived_at']}"></span></td><td><span th:text="${r.data['departed_at']}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.ledger}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.kind}"></th><th scope="col" th:text="#{ops.description}"></th><th scope="col" th:text="#{ops.quantity}"></th><th scope="col" th:text="#{ops.total}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.code}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.charges)}"><td colspan="7" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.charges}"><td><span th:text="${r.data['service_date']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('kind')}}"></span></td><td><span th:text="${r.data['description']}"></span></td><td><span th:text="${r.data['quantity']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td><td><span th:text="${r.data['source_key']}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.cancellations}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.kind}"></th><th scope="col" th:text="#{ops.reason}"></th><th scope="col" th:text="#{ops.fee}"></th><th scope="col" th:text="#{ops.refundDue}"></th><th scope="col" th:text="#{ops.day}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.cancellations)}"><td colspan="5" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.cancellations}"><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('kind')}}"></span></td><td><span th:text="${r.data['reason']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('cancellation_fee'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('proposed_refund_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span th:text="${r.data['processed_at']}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" >
+<summary class="fw-semibold" th:text="#{ops.history}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.previous}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.reason}"></th><th scope="col" th:text="#{ops.actor}"></th><th scope="col" th:text="#{ops.day}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.history)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.history}"><td><span th:text="${r.data['booking_room_id']}"></span></td><td><span th:text="${r.data['old_status']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('new_status')}}"></span></td><td><span th:text="${r.data['reason']}"></span></td><td><span th:text="${r.data['changed_by']}"></span></td><td><span th:text="${r.data['changed_at']}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details><details class="border rounded p-3 mb-3" sec:authorize="hasAuthority('audit.read')">
+<summary class="fw-semibold" th:text="#{ops.audit}"></summary>
+<div class="pt-3"><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.kind}"></th><th scope="col" th:text="#{ops.reason}"></th><th scope="col" th:text="#{ops.actor}"></th><th scope="col" th:text="#{ops.day}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(d.audit)}"><td colspan="4" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${d.audit}"><td><span th:text="${r.data['action']}"></span></td><td><span th:text="${r.data['reason']}"></span></td><td><span th:text="${r.data['actor']}"></span></td><td><span th:text="${r.data['created_at']}"></span></td></tr>
+</tbody></table>
+</div></div>
+</details>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

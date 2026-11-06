@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.services},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.services}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"></div>
+</div><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.categories}"></h5></div>
+  <div class="card-body">
+<form method="post" th:action="@{/admin/service-categories}" sec:authorize="hasAuthority('service.manage')" >
+<input type="hidden" name="id" th:value="${category == null ? '' : category.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.code}"></span>
+  <input class="form-control" type="text" name="code" th:value="${category == null ? '' : category.s('code')}" maxlength="30" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.name}"></span>
+  <input class="form-control" type="text" name="name" th:value="${category == null ? '' : category.s('name')}" maxlength="100" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-check"><input type="checkbox" class="form-check-input" name="active" value="true" th:checked="${category == null or category.active()}"> <span th:text="#{ops.active}"></span></label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.save}" ></button></div></div>
+</form><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.code}"></th><th scope="col" th:text="#{ops.name}"></th><th scope="col" th:text="#{ops.active}"></th><th scope="col" th:text="#{ops.actions}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(categories)}"><td colspan="4" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${categories}"><td><span th:text="${r.data['code']}"></span></td><td><span th:text="${r.data['name']}"></span></td><td><span th:text="${r.data['is_active']}"></span></td><td><a class="btn btn-sm btn-outline-primary" th:href="@{/admin/services(category=${r.id('id')})}" th:text="#{ops.edit}" sec:authorize="hasAuthority('service.manage')"></a><form method="post" th:action="@{/admin/service-categories/{id}/delete(id=${r.id('id')})}" sec:authorize="hasAuthority('service.manage')" class="d-inline-block ms-1">
+<button class="btn btn-sm btn-outline-danger mt-2" th:text="#{ops.delete}" ></button>
+</form></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.services}"></h5></div>
+  <div class="card-body">
+<form method="post" th:action="@{/admin/services}" sec:authorize="hasAuthority('service.manage')" >
+<input type="hidden" name="id" th:value="${item == null ? '' : item.id('id')}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.category}"></span><select class="form-select" name="categoryId" required>
+
+<option th:each="c:${categories}" th:value="${c.id('id')}" th:text="${c.s('name')}" th:selected="${item != null and c.id('id') == item.id('category_id')}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.code}"></span>
+  <input class="form-control" type="text" name="code" th:value="${item == null ? '' : item.s('code')}" maxlength="40" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.name}"></span>
+  <input class="form-control" type="text" name="name" th:value="${item == null ? '' : item.s('name')}" maxlength="150" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.unit}"></span>
+  <input class="form-control" type="text" name="unit" th:value="${item == null ? '' : item.s('unit')}" maxlength="40" required>
+</label></div></div><div class="mt-3"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.unitPrice}"></span>
+  <input class="form-control" type="number" name="unitPrice" th:value="${item == null ? 0 : item.money('unit_price')}" min="0" step="0.01" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.tax}"></span>
+  <input class="form-control" type="number" name="tax" th:value="${item == null ? 0 : item.money('tax_percent')}" min="0" max="100" step="0.01" required>
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.description}"></span>
+  <input class="form-control" type="text" name="description" th:value="${item == null ? '' : item.s('description')}" maxlength="1000">
+</label></div>
+<div class="col-12 col-md"><label class="form-check"><input type="checkbox" class="form-check-input" name="active" value="true" th:checked="${item == null or item.active()}"> <span th:text="#{ops.active}"></span></label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.save}" ></button></div></div></div>
+</form><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.code}"></th><th scope="col" th:text="#{ops.name}"></th><th scope="col" th:text="#{ops.category}"></th><th scope="col" th:text="#{ops.unit}"></th><th scope="col" th:text="#{ops.unitPrice}"></th><th scope="col" th:text="#{ops.tax}"></th><th scope="col" th:text="#{ops.active}"></th><th scope="col" th:text="#{ops.actions}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(items)}"><td colspan="8" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${items}"><td><span th:text="${r.data['code']}"></span></td><td><span th:text="${r.data['name']}"></span></td><td><span th:text="${r.data['category_name']}"></span></td><td><span th:text="${r.data['unit']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('unit_price'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span th:text="${r.data['tax_percent']}"></span></td><td><span th:text="${r.data['is_active']}"></span></td><td><a class="btn btn-sm btn-outline-primary" th:href="@{/admin/services(item=${r.id('id')})}" th:text="#{ops.edit}" sec:authorize="hasAuthority('service.manage')"></a><form method="post" th:action="@{/admin/services/{id}/delete(id=${r.id('id')})}" sec:authorize="hasAuthority('service.manage')" class="d-inline-block ms-1">
+<button class="btn btn-sm btn-outline-danger mt-2" th:text="#{ops.delete}" ></button>
+</form></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div><div sec:authorize="hasAuthority('service.manage')"><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.topServices}"></h5></div>
+  <div class="card-body">
+<form method="get" th:action="@{/admin/services}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${param.from != null ? param.from[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${param.until != null ? param.until[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.name}"></th><th scope="col" th:text="#{ops.quantity}"></th><th scope="col" th:text="#{ops.subtotal}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(top)}"><td colspan="3" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${top}"><td><span th:text="${r.data['name']}"></span></td><td><span th:text="${r.data['quantity']}"></span> <span th:text="${r.data['unit']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div></div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

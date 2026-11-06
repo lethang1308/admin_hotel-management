@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.invoice},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.invoice}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" th:href="@{/admin/invoices}" th:text="#{ops.invoices}" ></a><a class="btn btn-primary" th:href="@{/admin/invoices/{id}/pdf(id=${invoice.id('id')})}" th:text="#{ops.pdf}" th:if="${invoice.s('pdf_storage_key') != null}"></a></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<h5 th:text="${invoice.s('invoice_number')}"></h5>
+<p><a th:href="@{/admin/bookings/{id}(id=${invoice.id('booking_id')})}" th:text="${invoice.s('booking_code')}"></a> · <span class="badge bg-light-primary" th:text="#{${'ops.'+invoice.s('status')}}"></span></p>
+<p th:text="${invoice.s('buyer_name')}"></p><p class="text-muted" th:text="#{ops.invoiceHint}"></p>
+<p><span th:text="#{ops.subtotal}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('subtotal_amount'),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.tax}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('tax_amount'),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.total}"></span> <strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('total_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></strong></p>
+<p><span th:text="#{ops.paid}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(balance.net(),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.balance}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(balance.debt(),1,'COMMA',0,'POINT')+' VND'}"></span></p>
+<p th:if="${invoice.s('void_reason') != null}" th:text="${invoice.s('void_reason')}"></p><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.line}"></th><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.description}"></th><th scope="col" th:text="#{ops.quantity}"></th><th scope="col" th:text="#{ops.unitPrice}"></th><th scope="col" th:text="#{ops.total}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(lines)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${lines}"><td><span th:text="${r.data['line_number']}"></span></td><td><span th:text="${r.data['service_date']}"></span></td><td><span th:text="${r.data['description']}"></span></td><td><span th:text="${r.data['quantity']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('unit_price'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td></tr>
+</tbody></table>
+</div><form method="post" th:action="@{/admin/invoices/{id}/void(id=${invoice.id('id')})}"  class="mt-4" th:if="${invoice.s('status') != 'VOID'}">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.reason}"></span>
+  <input class="form-control" type="text" name="reason"  maxlength="500" required>
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-outline-danger mt-2" th:text="#{ops.void}" ></button></div></div>
+</form>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.invoices},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.invoices}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<form method="get" th:action="@{/admin/invoices}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.invoiceSearch}"></span>
+  <input class="form-control" type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}" maxlength="150">
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.status}"></span><select class="form-select" name="status" >
+<option value="" th:text="#{cms.all}"></option>
+<option value="DRAFT" th:selected="${(param.status != null ? param.status[0] : '') == 'DRAFT'}" th:text="#{ops.DRAFT}"></option>
+<option value="ISSUED" th:selected="${(param.status != null ? param.status[0] : '') == 'ISSUED'}" th:text="#{ops.ISSUED}"></option>
+<option value="VOID" th:selected="${(param.status != null ? param.status[0] : '') == 'VOID'}" th:text="#{ops.VOID}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${param.from != null ? param.from[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.until}"></span>
+  <input class="form-control" type="date" name="until" th:value="${param.until != null ? param.until[0] : ''}" >
+</label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form><div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.code}"></th><th scope="col" th:text="#{ops.bookingCode}"></th><th scope="col" th:text="#{ops.customer}"></th><th scope="col" th:text="#{ops.status}"></th><th scope="col" th:text="#{ops.revision}"></th><th scope="col" th:text="#{ops.total}"></th><th scope="col" th:text="#{ops.day}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(page.rows)}"><td colspan="7" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${page.rows}"><td><a th:href="@{/admin/invoices/{id}(id=${r.id('id')})}" th:text="${r.s('invoice_number')}"></a></td><td><a th:href="@{/admin/bookings/{id}(id=${r.id('booking_id')})}" th:text="${r.s('booking_code')}"></a></td><td><span th:text="${r.data['buyer_name']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td><td><span th:text="${r.data['revision']}"></span></td><td><span class="text-nowrap" th:text="${#numbers.formatDecimal(r.money('total_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></td><td><span th:text="${r.data['issued_at']}"></span></td></tr>
+</tbody></table>
+</div><nav class="d-flex gap-2 align-items-center mt-3" th:aria-label="#{ops.paging}">
+  <a th:if="${previous != null}" th:href="${previous}" class="btn btn-light" th:text="#{ops.previous}"></a>
+  <span class="text-muted" th:text="${(page.index + 1) + ' · ' + page.total}"></span>
+  <a th:if="${next != null}" th:href="${next}" class="btn btn-light" th:text="#{ops.next}"></a>
+</nav>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>

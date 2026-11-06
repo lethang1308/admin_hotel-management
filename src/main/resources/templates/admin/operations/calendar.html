@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{admin/layouts/main :: layout(#{ops.calendar},~{::#operations-page},~{::#operations-scripts})}">
+<body>
+<section id="operations-page">
+<div class="hotel-heading mb-4">
+  <div><p class="hotel-eyebrow" th:text="#{ops.workspace}"></p><h3 th:text="#{ops.calendar}"></h3></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" th:href="@{/admin/bookings}" th:text="#{ops.bookings}" ></a></div>
+</div><div class="card mb-4" >
+  
+  <div class="card-body">
+<form method="get" th:action="@{/admin/bookings/calendar}"  class="mb-3">
+<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.view}"></span><select class="form-select" name="view" >
+
+<option value="day" th:selected="${(param.view != null ? param.view[0] : 'week') == 'day'}" th:text="#{ops.day}"></option>
+<option value="week" th:selected="${(param.view != null ? param.view[0] : 'week') == 'week'}" th:text="#{ops.week}"></option>
+<option value="month" th:selected="${(param.view != null ? param.view[0] : 'week') == 'month'}" th:text="#{ops.month}"></option>
+</select></label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0">
+  <span th:text="#{ops.from}"></span>
+  <input class="form-control" type="date" name="from" th:value="${calendar.from}" >
+</label></div>
+<div class="col-12 col-md"><label class="form-label d-block mb-0"><span th:text="#{ops.roomType}"></span><select class="form-select" name="typeId" >
+<option value="" th:text="#{cms.all}"></option>
+<option th:each="t:${types}" th:value="${t.id('id')}" th:text="${t.s('name')}" th:selected="${t.s('id') == (param.typeId != null ? param.typeId[0] : '')}"></option>
+</select></label></div>
+<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+</form><div class="d-flex gap-2 mb-3"><a class="btn btn-outline-primary" th:href="@{/admin/bookings/calendar(view=${param.view != null ? param.view[0] : 'week'},from=${previousDate},typeId=${param.typeId != null ? param.typeId[0] : null})}" th:text="#{ops.previous}" ></a><a class="btn btn-outline-primary" th:href="@{/admin/bookings/calendar(view=${param.view != null ? param.view[0] : 'week'},from=${calendar.until},typeId=${param.typeId != null ? param.typeId[0] : null})}" th:text="#{ops.next}" ></a></div>
+<div class="table-responsive pricing-calendar"><table class="table table-bordered align-middle">
+<thead><tr><th class="pricing-sticky" th:text="#{ops.physicalRoom}"></th><th th:each="day:${calendar.days}" class="text-nowrap" th:text="${#temporals.format(day,'dd/MM')}"></th></tr></thead>
+<tbody><tr th:each="r:${calendar.rooms}">
+<th class="pricing-sticky"><span th:text="${r.room.s('room_number')}"></span><small class="text-muted d-block" th:text="${r.room.s('floor_name')+' · '+r.room.s('type_name')}"></small></th>
+<td th:each="cell:${r.cells}" class="small text-nowrap">
+<span class="badge" th:classappend="${cell.state == 'FREE' ? 'bg-light-secondary' : cell.state == 'BLOCK' ? 'bg-light-danger' : cell.state == 'PENDING' ? 'bg-light-warning' : cell.state == 'CHECKED_IN' ? 'bg-light-success' : 'bg-light-primary'}" th:text="#{${'ops.'+cell.state}}"></span>
+<a class="d-block text-truncate" style="max-width:9rem" th:if="${cell.booking != null}" th:href="@{/admin/bookings/{id}(id=${cell.booking})}" th:title="${cell.text}" th:text="${cell.text}"></a>
+<small class="d-block text-truncate" style="max-width:9rem" th:if="${cell.booking == null and cell.text != null}" th:title="${cell.text}" th:text="${cell.text}"></small></td>
+</tr></tbody></table></div>
+  </div>
+</div><div class="card mb-4" >
+  <div class="card-header pb-2"><h5 th:text="#{ops.inventory}"></h5></div>
+  <div class="card-body">
+<div class="table-responsive">
+<table class="table align-middle mb-0">
+<thead><tr><th scope="col" th:text="#{ops.day}"></th><th scope="col" th:text="#{ops.roomType}"></th><th scope="col" th:text="#{ops.sellable}"></th><th scope="col" th:text="#{ops.held}"></th><th scope="col" th:text="#{ops.reserved}"></th><th scope="col" th:text="#{ops.available}"></th></tr></thead>
+<tbody>
+  <tr th:if="${#lists.isEmpty(calendar.inventory)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
+  <tr th:each="r:${calendar.inventory}"><td><span th:text="${r.data['stay_date']}"></span></td><td><span th:text="${r.data['type_name']}"></span></td><td><span th:text="${r.data['sellable_rooms']}"></span></td><td><span th:text="${r.data['held_rooms']}"></span></td><td><span th:text="${r.data['reserved_rooms']}"></span></td><td><span th:text="${r.n('sellable_rooms')-r.n('held_rooms')-r.n('reserved_rooms')}"></span></td></tr>
+</tbody></table>
+</div>
+  </div>
+</div>
+</section>
+<th:block id="operations-scripts"></th:block>
+</body>
+</html>
