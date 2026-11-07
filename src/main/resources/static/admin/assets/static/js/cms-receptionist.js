@@ -219,4 +219,14 @@
     window.addEventListener('pagehide', () => { clearInterval(refreshTimer); clearInterval(clockTimer); });
     displayTimes();
     selectTab();
+    const shortcut = new URLSearchParams(window.location.search);
+    const requestedAction=shortcut.get('action'), requestedBooking=shortcut.get('booking'), requestedLine=shortcut.get('line');
+    if (['checkin','checkout'].includes(requestedAction) && /^[0-9]+$/.test(requestedBooking || '') && /^[0-9]+$/.test(requestedLine || '')) {
+        activeAction=requestedAction; activeBooking=requestedBooking; activeLine=requestedLine;
+        stayForm.reset();
+        stayDialog.querySelector('[data-stay-title]').textContent=labels[activeAction];
+        stayDialog.querySelector('[data-stay-code]').textContent='#'+activeBooking;
+        stayDialog.showModal();
+        loadPreview();
+    }
 })();

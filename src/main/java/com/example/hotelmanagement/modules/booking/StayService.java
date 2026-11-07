@@ -402,10 +402,26 @@ public class StayService {
         return preview(id, lineId, false);
     }
 
+    @PreAuthorize("hasAuthority('booking.checkin') and hasAuthority('booking.confirm')")
+    @Transactional(readOnly = true)
+    public StayPreview previewWalkIn(long id, long lineId) {
+        db.require(
+                "WALK_IN".equals(db.one("SELECT source FROM bookings WHERE id=?", id).s("source")),
+                "state");
+        return preview(id, lineId, true, true);
+    }
+
     private StayPreview preview(long id, long lineId, boolean checkIn) {
+        return preview(id, lineId, checkIn, false);
+    }
+
+    private StayPreview preview(long id, long lineId, boolean checkIn, boolean pendingAllowed) {
         var booking = db.one("SELECT * FROM bookings WHERE id=?", id);
         var line = db.bookingRoom(id, lineId);
-        db.require(line.s("status").equals(checkIn ? "CONFIRMED" : "CHECKED_IN"), "state");
+        db.require(
+                (line.s("status").equals(checkIn ? "CONFIRMED" : "CHECKED_IN")
+                        || (pendingAllowed && "PENDING".equals(line.s("status")))),
+                "state");
         var assigned = bookings.activeAllocation(lineId);
         var now = Instant.now();
         var balance = ledger.balance(id);

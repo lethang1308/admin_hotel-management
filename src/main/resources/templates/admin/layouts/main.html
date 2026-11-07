@@ -15,6 +15,7 @@
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-hotel.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-pricing.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-navigation.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-booking-desk.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-receptionist.css}">
     <meta name="csrf-token" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="csrf-header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
@@ -53,7 +54,9 @@
 <script th:src="@{/admin/assets/static/js/components/dark.js}"></script>
 <script th:src="@{/admin/assets/compiled/js/app.js}"></script>
 <script th:src="@{/admin/assets/static/js/admin-custom.js}"></script>
+<div th:replace="~{admin/fragments/booking-desk :: availability}"></div>
 <script th:src="@{/admin/assets/static/js/cms-navigation.js}"></script>
+<script th:src="@{/admin/assets/static/js/cms-booking-availability.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-notifications.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-identity.js}"></script>
 <th:block th:if="${pageScripts != null}" th:replace="${pageScripts}"/>

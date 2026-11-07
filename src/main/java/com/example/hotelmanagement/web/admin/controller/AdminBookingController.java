@@ -39,6 +39,7 @@ public class AdminBookingController {
     private final HotelServiceCatalogue services;
     private final FrontDeskPaymentService payments;
     private final InvoiceService invoices;
+    private final BookingAvailabilityService availability;
 
     @GetMapping
     @PreAuthorize("hasAuthority('booking.read.any')")
@@ -50,11 +51,13 @@ public class AdminBookingController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String until,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "ALL") String quick,
             HttpServletRequest request,
             Model model) {
         web.types(model);
         web.page(
-                queries.bookings(q, status, source, typeId, web.date(from), web.date(until), page),
+                queries.bookings(
+                        q, status, source, typeId, web.date(from), web.date(until), page, quick),
                 request,
                 model);
         model.addAttribute(
@@ -68,6 +71,25 @@ public class AdminBookingController {
                         "REJECTED",
                         "NO_SHOW"));
         model.addAttribute("sources", List.of("ONLINE", "PHONE", "WALK_IN"));
+        model.addAttribute("quick", quick);
+        model.addAttribute("quickCounts", queries.quickCounts());
+        var assigned = new HashMap<Long, List<OperationsStore.Row>>();
+        var listed =
+                (com.example.hotelmanagement.modules.booking.OperationsQueries.Page)
+                        model.getAttribute("page");
+        for (var b : listed.rows())
+            assigned.put(
+                    b.id("id"),
+                    db.rows(
+                            """
+                SELECT br.id,br.status,br.check_in_date,br.check_out_date,br.room_type_name_snapshot,r.room_number,r.status AS room_status
+                FROM booking_rooms br LEFT JOIN room_allocations a ON a.id=(
+                    SELECT MAX(ra.id) FROM room_allocations ra WHERE ra.booking_room_id=br.id)
+                LEFT JOIN rooms r ON r.id=a.room_id WHERE br.booking_id=? ORDER BY br.line_number
+                """,
+                            b.id("id")));
+        model.addAttribute("assignments", assigned);
+        model.addAttribute("today", db.today());
         return "admin/operations/bookings";
     }
 
@@ -99,6 +121,7 @@ public class AdminBookingController {
                     WHERE s.is_active=TRUE AND c.is_active=TRUE ORDER BY s.name
                     """));
         model.addAttribute("today", db.today());
+        web.types(model);
         return "admin/operations/booking";
     }
 
@@ -128,8 +151,18 @@ public class AdminBookingController {
 
     @GetMapping("/create")
     @PreAuthorize("hasAuthority('booking.create')")
-    public String createPage(@RequestParam(required = false) String customerSearch, Model model) {
-        var start = db.today();
+    public String createPage(
+            @RequestParam(required = false) String customerSearch,
+            @RequestParam(required = false) Long typeId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String until,
+            @RequestParam(defaultValue = "1") int adults,
+            @RequestParam(defaultValue = "0") int children,
+            @RequestParam(defaultValue = "1") int quantity,
+            Model model) {
+        var start = from == null || from.isBlank() ? db.today() : web.date(from);
+        var end = until == null || until.isBlank() ? start.plusDays(1) : web.date(until);
+        availability.validate(start, end, adults, children, quantity);
         var input =
                 new Create(
                         OperationsStore.code(""),
@@ -140,7 +173,16 @@ public class AdminBookingController {
                         "WALK_IN",
                         null,
                         null,
-                        List.of(new RoomInput(0, start, start.plusDays(1), 1, 0)));
+                        java.util.stream.IntStream.range(0, quantity)
+                                .mapToObj(
+                                        i ->
+                                                new RoomInput(
+                                                        typeId == null ? 0 : typeId,
+                                                        start,
+                                                        end,
+                                                        adults,
+                                                        children))
+                                .toList());
         prepareCreate(input, customerSearch, model);
         return "admin/operations/create";
     }
@@ -189,6 +231,9 @@ public class AdminBookingController {
             if (expected != null) {
                 long id = web.retry(() -> bookings.create(input, expected));
                 flash.addFlashAttribute("successMessage", messages.text("cms.saved"));
+                if ("WALK_IN".equals(source)
+                        && rooms.stream().anyMatch(r -> r.from().equals(db.today())))
+                    flash.addFlashAttribute("walkInCreated", true);
                 return redirect(id);
             }
             model.addAttribute("quote", bookings.preview(input));
@@ -318,15 +363,19 @@ public class AdminBookingController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String until,
             @RequestParam(required = false) Long physicalRoom,
+            @RequestParam(required = false) Long reviewedVersion,
+            @RequestParam(required = false) BigDecimal reviewedDifference,
             RedirectAttributes flash) {
         web.mutate(
                 () ->
-                        changes.request(
+                        changes.requestReviewed(
                                 id,
                                 line,
                                 new BookingChangeService.Change(
                                         kind, web.date(from), web.date(until), physicalRoom),
-                                reason),
+                                reason,
+                                reviewedVersion,
+                                reviewedDifference),
                 flash);
         return redirect(id) + "#changes";
     }

@@ -1,0 +1,12 @@
+.booking-input-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:1rem; }
+.booking-input-grid .form-label > span { display:block; margin-bottom:.4rem; }
+.booking-availability-option { border:1px solid var(--bs-border-color); padding:1rem; border-radius:.65rem; margin-top:1rem; }
+.booking-room-options { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.6rem; max-height:45vh; overflow:auto; }
+.booking-room-choice { text-align:left; white-space:normal; display:block; padding:.8rem; }
+.booking-room-choice small { display:block; margin-top:.35rem; }
+.booking-review { background:var(--bs-tertiary-bg); border-radius:.5rem; padding:1rem; }
+.booking-chips { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem; }
+.booking-rooms-cell { min-width:13rem; max-width:22rem; }
+.booking-rooms-cell > div { padding:.4rem 0; }
+.booking-customer-results { max-height:18rem; overflow:auto; margin-top:.75rem; }
+@media(max-width:575px) { .booking-input-grid { grid-template-columns:1fr; } }

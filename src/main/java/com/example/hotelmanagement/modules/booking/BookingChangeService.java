@@ -46,10 +46,55 @@ public class BookingChangeService {
             BigDecimal fee,
             BigDecimal difference) {}
 
+    public record Review(
+            long bookingVersion,
+            long targetRoom,
+            String roomNumber,
+            BigDecimal difference,
+            BigDecimal fee,
+            BigDecimal refundDue,
+            LocalDate from,
+            LocalDate until,
+            boolean movingOccupied) {}
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public Review preview(long bookingId, long lineId, Change change) {
+        var booking = db.one("SELECT * FROM bookings WHERE id=?", bookingId);
+        var p = plan(booking, lineId, change);
+        var balance = ledger.balance(bookingId);
+        return new Review(
+                booking.n("version"),
+                p.target(),
+                db.one("SELECT room_number FROM rooms WHERE id=?", p.target()).s("room_number"),
+                p.difference(),
+                p.fee(),
+                balance.debt().add(p.difference()).negate().max(ZERO),
+                p.window().from(),
+                p.window().to(),
+                p.occupied() && p.old().id("room_id") != p.target());
+    }
+
     public long request(long bookingId, long lineId, Change change, String reason) {
+        return requestReviewed(bookingId, lineId, change, reason, null, null);
+    }
+
+    public long requestReviewed(
+            long bookingId,
+            long lineId,
+            Change change,
+            String reason,
+            Long version,
+            BigDecimal difference) {
         var booking = bookings.lock(bookingId);
         reason = db.required(reason, 500);
         var p = plan(booking, lineId, change);
+        if (version != null || difference != null)
+            db.require(
+                    version != null
+                            && difference != null
+                            && version == booking.n("version")
+                            && difference.compareTo(p.difference()) == 0,
+                    "priceChanged");
         long id =
                 db.insert(
                         "booking_change_requests",
@@ -145,14 +190,16 @@ public class BookingChangeService {
                 "dates");
         LocalDate today = db.today();
         LocalDate claimFrom = occupied ? today : from;
+        boolean relocating =
+                move || ("EXTEND".equals(change.kind()) && change.physicalRoom() != null);
         Long preferred =
-                move
+                relocating
                         ? change.physicalRoom()
                         : occupied || !"CHANGE_DATES".equals(change.kind())
                                 ? old.id("room_id")
                                 : null;
         long type =
-                move
+                relocating
                         ? db.one("SELECT room_type_id FROM rooms WHERE id=?", preferred)
                                 .id("room_type_id")
                         : original.type();

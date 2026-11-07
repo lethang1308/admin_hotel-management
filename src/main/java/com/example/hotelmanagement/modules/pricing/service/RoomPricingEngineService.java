@@ -47,6 +47,17 @@ public class RoomPricingEngineService {
         }
     }
 
+    @PreAuthorize("hasAnyAuthority('room.read','booking.create')")
+    public Quote quoteAvailability(Stay stay) {
+        try {
+            return calculator.quote(
+                    new Request(List.of(stay), null, null, Instant.now(), null),
+                    context(null, null));
+        } catch (PricingCalculationException error) {
+            throw messages.error(error.getMessage());
+        }
+    }
+
     @PreAuthorize("hasAuthority('booking.update.any')")
     public Quote quoteAdjustment(Stay stay) {
         try {

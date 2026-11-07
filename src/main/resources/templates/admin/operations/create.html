@@ -10,23 +10,23 @@
   <div class="card-header pb-2"><h5 th:text="#{ops.customer}"></h5></div>
   <div class="card-body">
 
-<form method="get" th:action="@{/admin/bookings/create}"  class="mb-3">
-<div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
-  <span th:text="#{ops.findCustomer}"></span>
-  <input class="form-control" type="search" name="customerSearch" th:value="${param.customerSearch != null ? param.customerSearch[0] : ''}" maxlength="150">
-</label></div>
-<div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
+<form method="post" th:action="@{/admin/bookings/customers/search}" id="booking-customer-search"
+ sec:authorize="hasAuthority('customer.read')" th:data-empty="#{cms.empty}" th:data-select="#{ops.select}"
+ th:data-error="#{deskBook.loadError}">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{deskBook.customerMode}"></span><select class="form-select" name="mode">
+<option value="CONTACT" th:text="#{deskBook.contactSearch}"></option><option value="DOCUMENT" th:text="#{deskBook.documentSearch}"></option></select></label>
+<label class="form-label"><span th:text="#{deskBook.customerQuery}"></span><input class="form-control" name="q" minlength="3" maxlength="150" autocomplete="off" required></label>
+<div class="align-self-end pb-2"><button class="btn btn-outline-primary" th:text="#{deskBook.search}"></button>
+<button type="button" class="btn btn-light" data-new-customer th:text="#{deskBook.newCustomer}"></button></div>
+</div><small class="text-muted" th:text="#{deskBook.customerHint}"></small>
+<p class="small mt-2" data-customer-state role="status"></p><div class="booking-customer-results" data-customer-results></div>
 </form>
-<div th:if="${customers != null}" class="table-responsive">
-<table class="table mb-3"><thead><tr><th>ID</th><th th:text="#{ops.customer}"></th><th th:text="#{ops.phone}"></th><th></th></tr></thead>
-<tbody><tr th:each="r:${customers}"><td th:text="${r.id('id')}"></td><td th:text="${r.s('full_name')}"></td><td th:text="${r.s('phone')}"></td>
-<td><button type="button" class="btn btn-sm btn-outline-primary" data-select-customer th:data-id="${r.id('id')}" th:text="#{ops.select}"></button></td></tr></tbody></table>
-</div>
   </div>
 </div><div class="card mb-4" >
   
   <div class="card-body">
-<form method="post" th:action="@{/admin/bookings/create}"  id="booking-create">
+<form method="post" th:action="@{/admin/bookings/create}"  id="booking-create" th:data-quote="@{/admin/bookings/quote}" th:data-error="#{deskBook.loadError}">
 <input type="hidden" name="requestKey" th:value="${f.requestKey}"><div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
   <span th:text="#{ops.customerId}"></span>
   <input class="form-control" type="number" name="customerId" th:value="${f.customerId}" min="1">
@@ -101,7 +101,7 @@
 </label></div>
 <div class="col-12 col-md"><button type="button" class="btn btn-outline-danger" data-remove-room th:text="#{ops.remove}"></button></div></div></div></template>
 <button type="button" class="btn btn-outline-primary mt-2" data-add-room th:text="#{ops.addRoom}"></button>
-<button class="btn btn-primary mt-2" th:text="#{ops.preview}" ></button>
+<button class="btn btn-primary mt-2" data-quote-booking th:text="#{ops.preview}" ></button>
 <div th:if="${quote != null}" class="alert alert-light-primary mt-3" id="booking-quote">
   <h5 th:text="#{ops.preview}"></h5>
   <p><span th:text="#{ops.total}"></span> <strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(quote.totalAmount,1,'COMMA',0,'POINT')+' VND'}"></span></strong> ·
@@ -117,6 +117,20 @@
 </div>
   <button class="btn btn-success mt-3" name="expected" th:value="${quote.totalAmount}" data-save-booking th:text="#{ops.hold}"></button>
 </div>
+<template id="booking-quote-template">
+<div class="alert alert-light-primary mt-3" id="booking-quote">
+<h5 th:text="#{ops.preview}"></h5><p class="small" th:text="#{ops.quoteHint}"></p>
+<div class="booking-input-grid">
+<div><small th:text="#{ops.subtotal}"></small><strong class="d-block" data-quote-subtotal></strong></div>
+<div><small th:text="#{ops.tax}"></small><strong class="d-block" data-quote-tax></strong></div>
+<div><small th:text="#{ops.total}"></small><strong class="d-block" data-quote-total></strong></div>
+<div><small th:text="#{ops.deposit}"></small><strong class="d-block" data-quote-deposit></strong></div></div>
+<details class="my-3"><summary th:text="#{ops.nights}"></summary><div class="table-responsive"><table class="table table-sm">
+<thead><tr><th th:text="#{ops.line}"></th><th th:text="#{ops.day}"></th><th th:text="#{ops.roomType}"></th><th th:text="#{ops.discount}"></th><th th:text="#{ops.total}"></th></tr></thead>
+<tbody data-quote-nights></tbody></table></div></details>
+<button class="btn btn-success mt-3" name="expected" data-save-booking th:text="#{ops.hold}"></button>
+</div></template>
+<p class="text-muted small mt-3" data-quote-state role="status"></p>
 </form>
   </div>
 </div>

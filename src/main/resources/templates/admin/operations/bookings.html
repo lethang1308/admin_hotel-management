@@ -9,7 +9,14 @@
 </div><div class="card mb-4" >
   
   <div class="card-body">
-<form method="get" th:action="@{/admin/bookings}"  class="mb-3">
+<nav class="booking-chips" th:aria-label="#{deskBook.quickFilters}">
+<a class="btn btn-sm" th:classappend="${quick == 'ALL' ? 'btn-primary' : 'btn-outline-primary'}" th:href="@{/admin/bookings(quick='ALL',q=${param.q != null ? param.q[0] : null},status=${param.status != null ? param.status[0] : null},source=${param.source != null ? param.source[0] : null},typeId=${param.typeId != null ? param.typeId[0] : null},from=${param.from != null ? param.from[0] : null},until=${param.until != null ? param.until[0] : null})}"><span th:text="#{deskBook.quick.ALL}"></span> <span class="badge bg-light-secondary" th:text="${quickCounts.get('ALL')}"></span></a>
+<a class="btn btn-sm" th:classappend="${quick == 'ARRIVALS' ? 'btn-primary' : 'btn-outline-primary'}" th:href="@{/admin/bookings(quick='ARRIVALS',q=${param.q != null ? param.q[0] : null},status=${param.status != null ? param.status[0] : null},source=${param.source != null ? param.source[0] : null},typeId=${param.typeId != null ? param.typeId[0] : null},from=${param.from != null ? param.from[0] : null},until=${param.until != null ? param.until[0] : null})}"><span th:text="#{deskBook.quick.ARRIVALS}"></span> <span class="badge bg-light-secondary" th:text="${quickCounts.get('ARRIVALS')}"></span></a>
+<a class="btn btn-sm" th:classappend="${quick == 'DEPARTURES' ? 'btn-primary' : 'btn-outline-primary'}" th:href="@{/admin/bookings(quick='DEPARTURES',q=${param.q != null ? param.q[0] : null},status=${param.status != null ? param.status[0] : null},source=${param.source != null ? param.source[0] : null},typeId=${param.typeId != null ? param.typeId[0] : null},from=${param.from != null ? param.from[0] : null},until=${param.until != null ? param.until[0] : null})}"><span th:text="#{deskBook.quick.DEPARTURES}"></span> <span class="badge bg-light-secondary" th:text="${quickCounts.get('DEPARTURES')}"></span></a>
+<a class="btn btn-sm" th:classappend="${quick == 'PENDING' ? 'btn-primary' : 'btn-outline-primary'}" th:href="@{/admin/bookings(quick='PENDING',q=${param.q != null ? param.q[0] : null},status=${param.status != null ? param.status[0] : null},source=${param.source != null ? param.source[0] : null},typeId=${param.typeId != null ? param.typeId[0] : null},from=${param.from != null ? param.from[0] : null},until=${param.until != null ? param.until[0] : null})}"><span th:text="#{deskBook.quick.PENDING}"></span> <span class="badge bg-light-secondary" th:text="${quickCounts.get('PENDING')}"></span></a>
+<a class="btn btn-sm" th:classappend="${quick == 'IN_HOUSE' ? 'btn-primary' : 'btn-outline-primary'}" th:href="@{/admin/bookings(quick='IN_HOUSE',q=${param.q != null ? param.q[0] : null},status=${param.status != null ? param.status[0] : null},source=${param.source != null ? param.source[0] : null},typeId=${param.typeId != null ? param.typeId[0] : null},from=${param.from != null ? param.from[0] : null},until=${param.until != null ? param.until[0] : null})}"><span th:text="#{deskBook.quick.IN_HOUSE}"></span> <span class="badge bg-light-secondary" th:text="${quickCounts.get('IN_HOUSE')}"></span></a>
+</nav><form method="get" th:action="@{/admin/bookings}" class="mb-3">
+<input type="hidden" name="quick" th:value="${quick}">
 <div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
   <span th:text="#{ops.bookingSearch}"></span>
   <input class="form-control" type="search" name="q" th:value="${param.q != null ? param.q[0] : ''}" maxlength="150">
@@ -43,14 +50,33 @@
   <input class="form-control" type="date" name="until" th:value="${param.until != null ? param.until[0] : ''}" >
 </label></div>
 <div class="col-12 col-md"><button class="btn btn-primary mt-2" th:text="#{ops.filter}" ></button></div></div>
-</form><div class="table-responsive">
-<table class="table align-middle mb-0">
-<thead><tr><th scope="col" th:text="#{ops.bookingCode}"></th><th scope="col" th:text="#{ops.customer}"></th><th scope="col" th:text="#{ops.source}"></th><th scope="col" th:text="#{ops.from}"></th><th scope="col" th:text="#{ops.until}"></th><th scope="col" th:text="#{ops.status}"></th></tr></thead>
-<tbody>
-  <tr th:if="${#lists.isEmpty(page.rows)}"><td colspan="6" class="text-center text-muted py-3" th:text="#{cms.empty}"></td></tr>
-  <tr th:each="r:${page.rows}"><td><a th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="${r.s('booking_code')}"></a></td><td><span th:text="${r.data['contact_name']}"></span><small class='d-block text-muted'><span th:text="${r.data['contact_phone']}"></span></small></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('source')}}"></span></td><td><span th:text="${r.data['arrival']}"></span></td><td><span th:text="${r.data['departure']}"></span></td><td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td></tr>
-</tbody></table>
-</div><nav class="d-flex gap-2 align-items-center mt-3" th:aria-label="#{ops.paging}">
+</form><div class="table-responsive"><table class="table align-middle mb-0">
+<thead><tr><th th:text="#{ops.bookingCode}"></th><th th:text="#{ops.customer}"></th><th th:text="#{ops.physicalRoom}"></th>
+<th th:text="#{price.period}"></th><th th:text="#{ops.total}"></th><th th:text="#{ops.status}"></th><th th:text="#{ops.actions}"></th></tr></thead>
+<tbody><tr th:if="${#lists.isEmpty(page.rows)}"><td colspan="7" class="py-5 text-center text-muted" th:text="#{cms.empty}"></td></tr>
+<tr th:each="r:${page.rows}">
+<td><a class="fw-semibold" th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="${r.s('booking_code')}"></a>
+<small class="d-block text-muted" th:text="#{${'ops.'+r.s('source')}}"></small>
+<small th:if="${r.s('status') == 'PENDING'}" class="d-block text-warning" data-booking-countdown th:data-until="${r.time('hold_expires_at')}" th:text="${r.time('hold_expires_at')}"></small></td>
+<td><strong th:text="${r.s('contact_name')}"></strong><small class="d-block text-muted" th:text="${r.s('contact_phone')}"></small></td>
+<td class="booking-rooms-cell"><div th:each="room:${assignments.get(r.id('id'))}">
+<span th:text="${room.s('room_number') ?: '—'}"></span> · <span th:text="${room.s('room_type_name_snapshot')}"></span>
+<small class="badge" th:if="${room.s('room_status') != null}" th:classappend="${room.s('room_status') == 'AVAILABLE' ? 'bg-light-success' : room.s('room_status') == 'CLEANING' ? 'bg-light-warning' : 'bg-light-danger'}" th:text="#{${'hotel.status.'+room.s('room_status')}}"></small>
+</div></td>
+<td class="text-nowrap"><span th:text="${r.s('arrival')}"></span><small class="d-block text-muted" th:text="${r.s('departure')}"></small></td>
+<td class="text-nowrap"><strong th:text="${#numbers.formatDecimal(r.money('total_due'),1,'COMMA',0,'POINT')}+' ₫'"></strong>
+<small class="d-block"><span th:text="#{ops.paid}"></span> <span th:text="${#numbers.formatDecimal(r.money('net_paid'),1,'COMMA',0,'POINT')}"></span></small>
+<small class="d-block"><span th:text="#{ops.balance}"></span> <span th:text="${#numbers.formatDecimal(r.money('total_due').subtract(r.money('net_paid')),1,'COMMA',0,'POINT')}"></span></small></td>
+<td><span class="badge bg-light-primary" th:text="#{${'ops.'+r.s('status')}}"></span></td>
+<td><div class="d-flex flex-wrap gap-1 mb-1" th:each="room:${assignments.get(r.id('id'))}">
+<a class="btn btn-sm btn-outline-primary" sec:authorize="hasAuthority('booking.checkin')"
+ th:if="${room.s('status') == 'CONFIRMED' and room.date('check_in_date') == today}"
+ th:href="@{/admin/receptionist(booking=${r.id('id')},line=${room.id('id')},action='checkin')}" th:text="#{reception.checkin}"></a>
+<a class="btn btn-sm btn-outline-primary" sec:authorize="hasAuthority('booking.checkout')"
+ th:if="${room.s('status') == 'CHECKED_IN'}"
+ th:href="@{/admin/receptionist(booking=${r.id('id')},line=${room.id('id')},action='checkout')}" th:text="#{reception.checkout}"></a>
+</div><a class="btn btn-sm btn-light" th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="#{reception.details}"></a></td>
+</tr></tbody></table></div><nav class="d-flex gap-2 align-items-center mt-3" th:aria-label="#{ops.paging}">
   <a th:if="${previous != null}" th:href="${previous}" class="btn btn-light" th:text="#{ops.previous}"></a>
   <span class="text-muted" th:text="${(page.index + 1) + ' · ' + page.total}"></span>
   <a th:if="${next != null}" th:href="${next}" class="btn btn-light" th:text="#{ops.next}"></a>
@@ -58,6 +84,6 @@
   </div>
 </div>
 </section>
-<th:block id="operations-scripts"></th:block>
+<th:block id="operations-scripts"><script th:src="@{/admin/assets/static/js/cms-booking-list.js}"></script></th:block>
 </body>
 </html>

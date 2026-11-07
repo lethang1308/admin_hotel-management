@@ -70,6 +70,46 @@ public class OperationsQueries {
             LocalDate from,
             LocalDate until,
             int page) {
+        return bookings(search, status, source, type, from, until, page, "ALL");
+    }
+
+    @PreAuthorize("hasAuthority('booking.read.any')")
+    public Map<String, Long> quickCounts() {
+        var day = db.today();
+        return Map.of(
+                "ALL",
+                db.count("SELECT COUNT(*) FROM bookings"),
+                "ARRIVALS",
+                db.count(
+                        "SELECT COUNT(DISTINCT booking_id) FROM booking_rooms WHERE check_in_date=?"
+                            + " AND status='CONFIRMED'",
+                        day),
+                "DEPARTURES",
+                db.count(
+                        "SELECT COUNT(DISTINCT booking_id) FROM booking_rooms WHERE"
+                            + " check_out_date=? AND status='CHECKED_IN'",
+                        day),
+                "PENDING",
+                db.count("SELECT COUNT(*) FROM bookings WHERE status='PENDING'"),
+                "IN_HOUSE",
+                db.count(
+                        "SELECT COUNT(DISTINCT booking_id) FROM booking_rooms WHERE"
+                            + " status='CHECKED_IN'"));
+    }
+
+    @PreAuthorize("hasAuthority('booking.read.any')")
+    public Page bookings(
+            String search,
+            String status,
+            String source,
+            Long type,
+            LocalDate from,
+            LocalDate until,
+            int page,
+            String quick) {
+        db.require(
+                Set.of("ALL", "ARRIVALS", "DEPARTURES", "PENDING", "IN_HOUSE").contains(quick),
+                "input");
         dates(from, until);
         var sql =
                 new StringBuilder(
@@ -87,20 +127,52 @@ public class OperationsQueries {
                        OR LOWER(c.email) LIKE ? ESCAPE '!')
                     """);
             args.addAll(Collections.nCopies(7, like(search)));
+            String phone = search.replaceAll("[\\s().-]", "");
+            if (phone.matches("[+0-9]{3,20}")) {
+                int end = sql.lastIndexOf(")");
+                sql.insert(
+                        end,
+                        " OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(b.contact_phone,'"
+                            + " ',''),'-',''),'.',''),'(',''),')','') LIKE ? ESCAPE '!' OR"
+                            + " REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(c.phone,'"
+                            + " ',''),'-',''),'.',''),'(',''),')','') LIKE ? ESCAPE '!'");
+                args.add(like(phone));
+                args.add(like(phone));
+            }
         }
         add(sql, args, " AND b.status=?", status);
         add(sql, args, " AND b.source=?", source);
-        if (type != null || from != null || until != null) {
+        if ("PENDING".equals(quick)) {
+            sql.append(" AND b.status='PENDING'");
+        }
+        boolean lineFilter = Set.of("ARRIVALS", "DEPARTURES", "IN_HOUSE").contains(quick);
+        if (type != null || from != null || until != null || lineFilter) {
             sql.append(" AND EXISTS(SELECT 1 FROM booking_rooms r WHERE r.booking_id=b.id");
             add(sql, args, " AND r.room_type_id=?", type);
             add(sql, args, " AND r.check_out_date>?", from);
             add(sql, args, " AND r.check_in_date<?", until);
+            switch (quick) {
+                case "ARRIVALS" -> {
+                    sql.append(" AND r.check_in_date=? AND r.status='CONFIRMED'");
+                    args.add(db.today());
+                }
+                case "DEPARTURES" -> {
+                    sql.append(" AND r.check_out_date=? AND r.status='CHECKED_IN'");
+                    args.add(db.today());
+                }
+                case "IN_HOUSE" -> sql.append(" AND r.status='CHECKED_IN'");
+                default -> {}
+            }
             sql.append(")");
         }
         return page(
                 "SELECT b.*, (SELECT MIN(r.check_in_date) FROM booking_rooms r WHERE"
                     + " r.booking_id=b.id) AS arrival, (SELECT MAX(r.check_out_date) FROM"
-                    + " booking_rooms r WHERE r.booking_id=b.id) AS departure ",
+                    + " booking_rooms r WHERE r.booking_id=b.id) AS departure, COALESCE((SELECT"
+                    + " SUM(c.amount) FROM booking_charges c WHERE c.booking_id=b.id AND"
+                    + " c.status='POSTED'),0) AS total_due, COALESCE((SELECT SUM(CASE WHEN"
+                    + " p.kind='REFUND' THEN -p.amount ELSE p.amount END) FROM payment_transactions"
+                    + " p WHERE p.booking_id=b.id AND p.status='SUCCEEDED'),0) AS net_paid ",
                 sql,
                 args,
                 "b.id DESC",
@@ -113,7 +185,7 @@ public class OperationsQueries {
         var rooms =
                 db.rows(
                         """
-                SELECT br.*, r.room_number FROM booking_rooms br LEFT JOIN room_allocations a ON a.id=(
+                SELECT br.*, r.room_number,r.status AS physical_status FROM booking_rooms br LEFT JOIN room_allocations a ON a.id=(
                   SELECT MAX(ra.id) FROM room_allocations ra WHERE ra.booking_room_id=br.id)
                 LEFT JOIN rooms r ON r.id=a.room_id WHERE br.booking_id=? ORDER BY br.line_number
                 """,
@@ -287,7 +359,7 @@ public class OperationsQueries {
         var sql =
                 new StringBuilder(
                         "FROM payment_transactions p JOIN bookings b ON b.id=p.booking_id WHERE"
-                            + " 1=1");
+                                + " 1=1");
         var args = new ArrayList<>();
         add(sql, args, " AND p.kind=?", kind);
         add(sql, args, " AND p.status=?", status);
@@ -329,7 +401,7 @@ public class OperationsQueries {
             db.require(search.length() <= 150, "input");
             sql.append(
                     " AND (LOWER(i.invoice_number) LIKE ? ESCAPE '!' OR LOWER(b.booking_code) LIKE"
-                        + " ? ESCAPE '!' OR LOWER(i.buyer_name) LIKE ? ESCAPE '!')");
+                            + " ? ESCAPE '!' OR LOWER(i.buyer_name) LIKE ? ESCAPE '!')");
             args.addAll(Collections.nCopies(3, like(search)));
         }
         add(sql, args, " AND i.status=?", status);
@@ -342,7 +414,7 @@ public class OperationsQueries {
         var invoice =
                 db.one(
                         "SELECT i.*,b.booking_code FROM invoices i JOIN bookings b ON"
-                            + " b.id=i.booking_id WHERE i.id=?",
+                                + " b.id=i.booking_id WHERE i.id=?",
                         id);
         return Map.of(
                 "invoice",

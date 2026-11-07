@@ -63,6 +63,12 @@
                         </div>
                     </li>
 
+                    <li class="nav-item me-2" sec:authorize="hasAnyAuthority('room.read','booking.create')">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-open-availability>
+                            <i class="bi bi-search me-1" aria-hidden="true"></i><span class="d-none d-md-inline" th:text="#{deskBook.availability}"></span>
+                            <span class="visually-hidden d-md-none" th:text="#{deskBook.availability}"></span>
+                        </button>
+                    </li>
                     <!-- Language Selector Dropdown -->
                     <li class="nav-item dropdown me-3">
                         <a class="nav-link dropdown-toggle text-gray-600 d-flex align-items-center gap-1"

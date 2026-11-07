@@ -40,7 +40,7 @@ public class RoomAllocationService {
         for (var slot : slots) {
             if (db.count(
                             "SELECT COUNT(*) FROM room_type_inventory WHERE room_type_id=? AND"
-                                + " stay_date=?",
+                                    + " stay_date=?",
                             slot.type(),
                             slot.date())
                     == 0) missing.add(slot.type());
@@ -49,59 +49,140 @@ public class RoomAllocationService {
         for (var slot : slots) {
             db.one(
                     "SELECT * FROM room_type_inventory WHERE room_type_id=? AND stay_date=? FOR"
-                        + " UPDATE",
+                            + " UPDATE",
                     slot.type(),
                     slot.date());
         }
     }
 
-    public long choose(Window window, Long preferred, Long ownAllocation, Set<Long> excluded) {
-        var candidates =
+    public record Candidate(
+            long id,
+            String number,
+            String status,
+            boolean available,
+            String reason,
+            LocalDate conflictDate,
+            String conflictCode,
+            Long blockId) {}
+
+    public List<Candidate> candidates(Window window, Long ownAllocation, boolean readyNow) {
+        var result = new ArrayList<Candidate>();
+        for (var room :
                 db.rows(
                         """
-                SELECT id,room_number FROM rooms
-                WHERE room_type_id=? AND status<>'INACTIVE' AND sell_from<=?
-                  AND (sell_until IS NULL OR sell_until>=?) AND (? IS NULL OR id=?)
-                ORDER BY id
+                SELECT r.*,f.is_active AS floor_active FROM rooms r JOIN floors f ON f.id=r.floor_id
+                WHERE r.room_type_id=? ORDER BY CASE WHEN r.status='AVAILABLE' THEN 0 ELSE 1 END,r.id
                 """,
-                        window.type(),
-                        window.from(),
-                        window.to(),
-                        preferred,
-                        preferred);
-        String conflict = window.from() + " → " + window.to();
-        for (var room : candidates) {
-            long id = room.id("id");
-            if (excluded.contains(id)) continue;
-            var claims =
+                        window.type())) {
+            String reason = null;
+            boolean valid =
+                    !"INACTIVE".equals(room.s("status"))
+                            && Boolean.TRUE.equals(room.data().get("floor_active"))
+                            && !room.date("sell_from").isAfter(window.from())
+                            && (room.s("sell_until") == null
+                                    || !room.date("sell_until").isBefore(window.to()));
+            if (!valid) reason = "saleWindow";
+            var conflicts =
                     db.rows(
                             """
                     SELECT c.stay_date,c.room_block_id,b.booking_code FROM room_night_claims c
                     LEFT JOIN room_allocations a ON a.id=c.room_allocation_id
-                    LEFT JOIN booking_rooms br ON br.id=a.booking_room_id
-                    LEFT JOIN bookings b ON b.id=br.booking_id
+                    LEFT JOIN booking_rooms br ON br.id=a.booking_room_id LEFT JOIN bookings b ON b.id=br.booking_id
                     WHERE c.room_id=? AND c.stay_date>=? AND c.stay_date<?
-                      AND (c.room_allocation_id IS NULL OR ? IS NULL OR c.room_allocation_id<>?)
+                    AND (c.room_allocation_id IS NULL OR ? IS NULL OR c.room_allocation_id<>?)
                     ORDER BY c.stay_date LIMIT 1
                     """,
-                            id,
+                            room.id("id"),
                             window.from(),
                             window.to(),
                             ownAllocation,
                             ownAllocation);
-            if (claims.isEmpty()) return id;
-            var claim = claims.get(0);
+            var conflict = conflicts.isEmpty() ? null : conflicts.get(0);
+            if (reason == null && conflict != null)
+                reason = conflict.id("room_block_id") == null ? "bookingConflict" : "blockConflict";
+            if (reason == null
+                    && readyNow
+                    && (!"AVAILABLE".equals(room.s("status"))
+                            || inventory.openStay(room.id("id"))
+                            || db.count(
+                                            """
+                        SELECT COUNT(*) FROM room_allocations a JOIN booking_rooms br ON br.id=a.booking_room_id
+                        WHERE a.room_id=? AND a.status IN ('SCHEDULED','OCCUPIED') AND a.to_date<=?
+                            AND br.expected_check_out_at>? AND (? IS NULL OR a.id<>?)
+                        """,
+                                            room.id("id"),
+                                            window.from(),
+                                            OperationsStore.ts(Instant.now()),
+                                            ownAllocation,
+                                            ownAllocation)
+                                    > 0)) reason = "notReady";
+            result.add(
+                    new Candidate(
+                            room.id("id"),
+                            room.s("room_number"),
+                            room.s("status"),
+                            reason == null,
+                            reason,
+                            conflict == null ? null : conflict.date("stay_date"),
+                            conflict == null ? null : conflict.s("booking_code"),
+                            conflict == null ? null : conflict.id("room_block_id")));
+        }
+        return result;
+    }
+
+    public long choose(Window window, Long preferred, Long ownAllocation, Set<Long> excluded) {
+        var candidates =
+                candidates(window, ownAllocation, false).stream()
+                        .filter(r -> preferred == null || preferred == r.id())
+                        .filter(r -> !excluded.contains(r.id()))
+                        .toList();
+        var chosen = candidates.stream().filter(Candidate::available).findFirst();
+        if (chosen.isPresent()) return chosen.get().id();
+        String conflict = window.from() + " → " + window.to();
+        if (!candidates.isEmpty()) {
+            var c = candidates.get(0);
             conflict =
-                    room.s("room_number")
+                    c.number()
                             + " / "
-                            + claim.s("stay_date")
+                            + Objects.toString(c.conflictDate(), window.from().toString())
                             + " / "
-                            + (claim.s("booking_code") == null
-                                    ? "#" + claim.s("room_block_id")
-                                    : claim.s("booking_code"));
+                            + Objects.toString(
+                                    c.conflictCode(),
+                                    c.blockId() == null
+                                            ? Objects.toString(c.reason(), "")
+                                            : "#" + c.blockId());
         }
         db.require(false, "conflict", conflict);
         throw new IllegalStateException();
+    }
+
+    public void assertClaims(long line, Window window) {
+        var assigned =
+                db.rows(
+                        "SELECT * FROM room_allocations WHERE booking_room_id=? AND"
+                            + " status='SCHEDULED'",
+                        line);
+        db.require(assigned.size() == 1, "state");
+        var a = assigned.get(0);
+        db.require(
+                a.date("from_date").equals(window.from())
+                        && a.date("to_date").equals(window.to())
+                        && db.count(
+                                        "SELECT COUNT(*) FROM rooms WHERE id=? AND room_type_id=?",
+                                        a.id("room_id"),
+                                        window.type())
+                                == 1
+                        && db.count(
+                                        "SELECT COUNT(*) FROM room_night_claims WHERE"
+                                            + " room_allocation_id=? AND room_id=? AND stay_date>=?"
+                                            + " AND stay_date<?",
+                                        a.id("id"),
+                                        a.id("room_id"),
+                                        window.from(),
+                                        window.to())
+                                == java.time.temporal.ChronoUnit.DAYS.between(
+                                        window.from(), window.to()),
+                "state");
     }
 
     public void lockRooms(Collection<Long> rooms) {
@@ -165,7 +246,7 @@ public class RoomAllocationService {
     public void turnOver(long room, String reason) {
         db.update(
                 "UPDATE rooms SET status='DIRTY',version=version+1,updated_at=CURRENT_TIMESTAMP(6)"
-                    + " WHERE id=?",
+                        + " WHERE id=?",
                 room);
         db.insert(
                 "room_status_history",

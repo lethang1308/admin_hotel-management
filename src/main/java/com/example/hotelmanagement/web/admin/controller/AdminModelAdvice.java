@@ -20,6 +20,8 @@ import java.util.Locale;
 public class AdminModelAdvice {
 
     private final AppProperties appProperties;
+    private final com.example.hotelmanagement.modules.hotel.service.HotelInventoryCoordinator
+            inventory;
     private final com.example.hotelmanagement.modules.hotel.service.HotelSettingService
             hotelSettings;
 
@@ -42,6 +44,11 @@ public class AdminModelAdvice {
                 "langEnUrl",
                 languageUrl.cloneBuilder().replaceQueryParam("lang", "en").build().toUriString());
         model.addAttribute("currentYear", java.time.Year.now().getValue());
+        if (authentication != null && authentication.isAuthenticated()) {
+            var today = inventory.today();
+            model.addAttribute("bookingToday", today);
+            model.addAttribute("bookingTomorrow", today.plusDays(1));
+        }
 
         Locale currentLocale = LocaleContextHolder.getLocale();
         String currentLang =

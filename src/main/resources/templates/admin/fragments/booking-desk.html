@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><body>
+<dialog th:fragment="availability" id="booking-availability" class="reception-dialog reception-dialog-wide"
+ sec:authorize="hasAnyAuthority('room.read','booking.create')"
+ th:data-endpoint="@{/admin/bookings/availability}" th:data-create="@{/admin/bookings/create}"
+ th:data-can-book="${#authorization.expression(&quot;hasAuthority('booking.create')&quot;)}"
+ th:data-error="#{deskBook.loadError}" th:data-available="#{deskBook.available}"
+ th:data-empty="#{deskBook.none}" th:data-book="#{deskBook.book}" th:data-total="#{ops.total}"
+ th:data-deposit="#{ops.deposit}" th:data-average="#{deskBook.average}" th:data-capacity="#{deskBook.capacity}"
+ th:data-continuous="#{deskBook.continuous}" th:data-day="#{ops.day}" th:data-remaining="#{ops.available}">
+<div class="reception-dialog-heading"><h5 th:text="#{deskBook.availability}"></h5>
+<button type="button" class="btn-close" data-booking-close th:aria-label="#{reception.close}"></button></div>
+<p class="small text-muted" th:text="#{deskBook.availabilityHint}"></p>
+<form id="availability-form">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{ops.from}"></span><input class="form-control" name="from" type="date" th:value="${bookingToday}" required></label>
+<label class="form-label"><span th:text="#{ops.until}"></span><input class="form-control" name="until" type="date" th:value="${bookingTomorrow}" required></label>
+<label class="form-label"><span th:text="#{deskBook.adultsPerRoom}"></span><input class="form-control" name="adults" type="number" min="1" max="100" value="1" required></label>
+<label class="form-label"><span th:text="#{deskBook.childrenPerRoom}"></span><input class="form-control" name="children" type="number" min="0" max="99" value="0" required></label>
+<label class="form-label"><span th:text="#{deskBook.quantity}"></span><input class="form-control" name="quantity" type="number" min="1" max="12" value="1" required></label>
+</div>
+<label class="form-check my-3"><input class="form-check-input" type="checkbox" name="readyNow" value="true"><span class="form-check-label" th:text="#{deskBook.readyNow}"></span></label>
+<button class="btn btn-primary" th:text="#{deskBook.search}"></button>
+</form>
+<p class="small text-muted mt-3" data-availability-state aria-live="polite"></p>
+<div data-availability-results></div>
+</dialog>
+
+<th:block th:fragment="actions">
+<dialog id="booking-room-dialog" class="reception-dialog reception-dialog-wide">
+<div class="reception-dialog-heading"><h5 th:text="#{deskBook.assign}"></h5><button type="button" class="btn-close" data-booking-close th:aria-label="#{reception.close}"></button></div>
+<p class="small text-muted" th:text="#{deskBook.roomHint}"></p>
+<p data-room-state role="status"></p><div data-room-options class="booking-room-options"></div>
+<form method="post" th:action="@{/admin/bookings/{id}/assign-room(id=${d.booking.id('id')})}" id="booking-assign-form">
+<input type="hidden" name="line"><input type="hidden" name="room">
+<label class="form-label mt-3"><span th:text="#{ops.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<button class="btn btn-primary" data-room-submit disabled th:text="#{deskBook.assign}"></button></form></dialog>
+
+<dialog id="booking-change-dialog" class="reception-dialog reception-dialog-wide">
+<div class="reception-dialog-heading"><h5 th:text="#{deskBook.changePreview}"></h5><button type="button" class="btn-close" data-booking-close th:aria-label="#{reception.close}"></button></div>
+<form method="post" th:action="@{/admin/bookings/{id}/changes(id=${d.booking.id('id')})}" id="booking-change-form">
+<input type="hidden" name="line"><input type="hidden" name="from"><input type="hidden" name="reviewedVersion"><input type="hidden" name="reviewedDifference">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{ops.kind}"></span><select class="form-select" name="kind">
+<option value="CHANGE_ROOM" th:text="#{ops.CHANGE_ROOM}"></option><option value="EXTEND" th:text="#{ops.EXTEND}"></option><option value="SHORTEN" th:text="#{ops.SHORTEN}"></option>
+</select></label>
+<label class="form-label"><span th:text="#{ops.until}"></span><input class="form-control" name="until" type="date" required></label>
+<label class="form-label"><span th:text="#{ops.roomType}"></span><select class="form-select" data-change-type>
+<option th:each="t:${types}" th:value="${t.id('id')}" th:text="${t.s('name')}"></option></select></label>
+</div>
+<label class="form-label my-3"><span th:text="#{ops.physicalRoom}"></span><select class="form-select" name="physicalRoom"><option value="" th:text="#{deskBook.keepRoom}"></option></select></label>
+<p class="small text-muted" th:text="#{deskBook.changeHint}"></p>
+<div class="alert alert-light-warning" data-change-today hidden><span th:text="#{deskBook.checkoutToday}"></span>
+<a data-checkout-link th:text="#{ops.checkout}"></a></div>
+<p data-change-state role="status"></p>
+<div data-change-result class="booking-review" hidden></div>
+<button class="btn btn-outline-primary mb-3" type="button" data-change-preview th:text="#{deskBook.preview}"></button>
+<label class="form-label"><span th:text="#{ops.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<button class="btn btn-primary" data-change-save disabled th:text="#{deskBook.saveRequest}"></button></form>
+</dialog>
+
+<dialog id="booking-walkin-dialog" class="reception-dialog reception-dialog-wide">
+<div class="reception-dialog-heading"><h5 th:text="#{deskBook.fastCheckin}"></h5><button type="button" class="btn-close" data-booking-close th:aria-label="#{reception.close}"></button></div>
+<p data-walkin-state role="status"></p>
+<form method="post" th:action="@{/admin/bookings/{id}/walk-in-checkin(id=${d.booking.id('id')})}" id="booking-walkin-form" hidden>
+<input type="hidden" name="line"><input type="hidden" name="key">
+<div data-walkin-summary class="booking-review"></div>
+<div data-walkin-guests class="mt-3"></div>
+<div class="booking-input-grid" sec:authorize="hasAuthority('payment.collect')">
+<label class="form-label"><span th:text="#{reception.collectNow}"></span><input class="form-control" name="amount" type="number" min="0" step="1" value="0" required></label>
+<label class="form-label"><span th:text="#{reception.method}"></span><select class="form-select" name="method"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label>
+</div>
+<input type="hidden" name="amount" value="0" sec:authorize="!hasAuthority('payment.collect')">
+<label class="form-label mt-3"><span th:text="#{ops.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<button class="btn btn-primary" data-walkin-submit th:text="#{deskBook.fastCheckin}"></button>
+</form></dialog>
+
+<template id="booking-guest-template"><fieldset class="border rounded p-3 mb-3">
+<legend class="float-none w-auto fs-6 px-1" data-guest-title></legend><input type="hidden" name="guestType">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{reception.guestName}"></span><input class="form-control" name="guestName" maxlength="150" required autocomplete="off"></label>
+<label class="form-label"><span th:text="#{reception.documentType}"></span><select class="form-select" name="documentType"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option></select></label>
+<label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="documentNumber" maxlength="60" autocomplete="off"></label>
+</div></fieldset></template>
+
+<span hidden id="booking-action-config" th:data-base="@{/admin/bookings/}" th:data-desk="@{/admin/receptionist}"
+ th:data-booking="${d.booking.id('id')}" th:data-today="${today}" th:data-error="#{deskBook.loadError}"
+ th:data-ready="#{deskBook.roomHint}" th:data-pick="#{deskBook.selectRoom}" th:data-difference="#{ops.difference}"
+ th:data-fee="#{ops.fee}" th:data-refund="#{ops.refundDue}" th:data-move="#{deskBook.moveNotice}"
+ th:data-deposit="#{reception.depositShort}" th:data-total="#{ops.total}" th:data-surcharge="#{reception.surcharge}"
+ th:data-adult="#{reception.adult}" th:data-child="#{reception.child}" th:data-not-ready="#{reception.notReady}">
+</span>
+<div hidden id="booking-reason-labels">
+<span data-reason="saleWindow" th:text="#{deskBook.saleWindow}"></span><span data-reason="bookingConflict" th:text="#{deskBook.bookingConflict}"></span>
+<span data-reason="blockConflict" th:text="#{deskBook.blockConflict}"></span><span data-reason="notReady" th:text="#{deskBook.notReady}"></span>
+</div>
+<div hidden id="booking-status-labels"><span data-status="AVAILABLE" th:text="#{hotel.status.AVAILABLE}"></span><span data-status="OCCUPIED" th:text="#{hotel.status.OCCUPIED}"></span><span data-status="DIRTY" th:text="#{hotel.status.DIRTY}"></span><span data-status="CLEANING" th:text="#{hotel.status.CLEANING}"></span><span data-status="MAINTENANCE" th:text="#{hotel.status.MAINTENANCE}"></span><span data-status="INACTIVE" th:text="#{hotel.status.INACTIVE}"></span></div>
+</th:block>
+</body></html>

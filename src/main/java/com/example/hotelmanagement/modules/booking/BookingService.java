@@ -91,7 +91,7 @@ public class BookingService {
                         ? null
                         : db.one(
                                         "SELECT id FROM vouchers WHERE UPPER(code)=UPPER(?) FOR"
-                                            + " UPDATE",
+                                                + " UPDATE",
                                         voucher)
                                 .id("id");
         Quote quote = price(input.rooms(), voucher, customerId);
@@ -243,7 +243,7 @@ public class BookingService {
         long revision =
                 db.count(
                                 "SELECT COALESCE(MAX(revision),0) FROM booking_room_nights WHERE"
-                                    + " booking_room_id=? AND stay_date=?",
+                                        + " booking_room_id=? AND stay_date=?",
                                 room,
                                 night.date())
                         + 1;
@@ -320,7 +320,11 @@ public class BookingService {
                 pending.stream().noneMatch(l -> l.date("check_in_date").isBefore(db.today())),
                 "arrival");
         allocation.lockInventory(pending.stream().map(this::window).toList());
+        var roomIds =
+                pending.stream().map(l -> activeAllocation(l.id("id")).id("room_id")).toList();
+        allocation.lockRooms(roomIds);
         for (var line : pending) {
+            allocation.assertClaims(line.id("id"), window(line));
             for (var night : nights(line.id("id"))) {
                 allocation.counters(
                         night.id("inventory_room_type_id"), night.date("stay_date"), -1, 1);
@@ -336,7 +340,7 @@ public class BookingService {
                 id);
         db.update(
                 "UPDATE voucher_redemptions SET status='REDEEMED',redeemed_at=CURRENT_TIMESTAMP(6)"
-                    + " WHERE booking_id=? AND status='RESERVED'",
+                        + " WHERE booking_id=? AND status='RESERVED'",
                 id);
         aggregate(booking, reason);
         db.event("BOOKING:" + id + ":CONFIRMED", "BOOKING_CONFIRMED", id);
@@ -357,6 +361,44 @@ public class BookingService {
     @PreAuthorize("hasAuthority('booking.cancel.any')")
     public void cancel(long id, Long line, String reason) {
         terminate(id, line, "CANCEL", db.required(reason, 1000));
+    }
+
+    public record NoShowReview(
+            BigDecimal roomAmount,
+            BigDecimal fee,
+            BigDecimal projectedDebt,
+            BigDecimal refundDue) {}
+
+    @PreAuthorize("hasAuthority('booking.no_show')")
+    @Transactional(readOnly = true)
+    public NoShowReview previewNoShow(long id, long lineId) {
+        var br = db.bookingRoom(id, lineId);
+        db.require(
+                "CONFIRMED".equals(br.s("status"))
+                        && !Instant.now().isBefore(br.time("expected_check_in_at")),
+                "state");
+        var order = db.one("SELECT * FROM bookings WHERE id=?", id);
+        var nights = nights(lineId);
+        var amount =
+                nights.stream().map(n -> n.money("net_room_amount")).reduce(ZERO, BigDecimal::add);
+        var fee =
+                cancellationFee(
+                        policy(order).cancellation(),
+                        br,
+                        Instant.now(),
+                        amount,
+                        nights.isEmpty() ? ZERO : nights.get(0).money("net_room_amount"),
+                        true);
+        var credit = ZERO;
+        for (var n : nights)
+            credit =
+                    credit.add(
+                            db.sum(
+                                    "SELECT COALESCE(SUM(amount),0) FROM booking_charges WHERE"
+                                        + " booking_room_night_id=? AND status='POSTED'",
+                                    n.id("id")));
+        var debt = ledger.balance(id).debt().subtract(credit).add(fee);
+        return new NoShowReview(amount, fee, debt, debt.negate().max(ZERO));
     }
 
     @PreAuthorize("hasAuthority('booking.no_show')")
@@ -570,7 +612,7 @@ public class BookingService {
                 held ? 0 : -1);
         db.update(
                 "UPDATE booking_room_nights SET inventory_state='RELEASED',stay_status=? WHERE"
-                    + " id=?",
+                        + " id=?",
                 status,
                 night.id("id"));
         return ledger.reverseNight(booking, line, night.id("id"), cancellation, key);
@@ -586,7 +628,7 @@ public class BookingService {
         inventory.lock();
         db.rows(
                 "SELECT v.id FROM vouchers v JOIN voucher_redemptions r ON r.voucher_id=v.id WHERE"
-                    + " r.booking_id=? FOR UPDATE",
+                        + " r.booking_id=? FOR UPDATE",
                 id);
         return db.lockBooking(id);
     }
@@ -599,14 +641,14 @@ public class BookingService {
     List<Row> nights(long line) {
         return db.rows(
                 "SELECT * FROM booking_room_nights WHERE booking_room_id=? AND"
-                    + " inventory_state<>'RELEASED' ORDER BY stay_date",
+                        + " inventory_state<>'RELEASED' ORDER BY stay_date",
                 line);
     }
 
     Row activeAllocation(long line) {
         return db.one(
                 "SELECT * FROM room_allocations WHERE booking_room_id=? AND status IN"
-                    + " ('SCHEDULED','OCCUPIED')",
+                        + " ('SCHEDULED','OCCUPIED')",
                 line);
     }
 
@@ -655,7 +697,7 @@ public class BookingService {
             if (!statuses.contains(status)) continue;
             db.update(
                     "UPDATE bookings SET status=?,version=version+1,updated_at=CURRENT_TIMESTAMP(6)"
-                        + " WHERE id=?",
+                            + " WHERE id=?",
                     status,
                     id);
             if (!status.equals(booking.s("status")))
