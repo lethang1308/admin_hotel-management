@@ -22,6 +22,8 @@ logging:
     com.example.hotelmanagement: INFO
 
 app:
+  reception:
+    notifications-enabled: false
   hotel:
     calendar-enabled: false
     inventory-days: 30

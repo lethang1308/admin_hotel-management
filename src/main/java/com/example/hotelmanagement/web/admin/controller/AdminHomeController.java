@@ -42,9 +42,4 @@ public class AdminHomeController {
         model.addAttribute("recentUsers", recentUsers.getItems());
         return "admin/dashboard";
     }
-
-    @GetMapping("/admin/receptionist")
-    public String receptionist() {
-        return "admin/receptionist";
-    }
 }

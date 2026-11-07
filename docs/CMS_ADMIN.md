@@ -106,3 +106,7 @@ Kết quả nghiệm thu: Maven package BUILD SUCCESS; 43 kiểm thử mặc đ�
 ## Phần 4 – Đặt phòng và vận hành
 
 Xem [hướng dẫn đặt phòng, dịch vụ, thanh toán và hóa đơn](CMS_BOOKINGS.md). Flyway V6 lưu phiên bản giá từng đêm và chống ghi lặp lượt sử dụng dịch vụ.
+
+## Bàn lễ tân
+
+Đã bổ sung Dashboard vận hành ca và nhóm menu thu gọn. Xem [hướng dẫn lễ tân](CMS_RECEPTIONIST.md).

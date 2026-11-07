@@ -11,6 +11,8 @@ public final class CmsTestData {
                     + " FROM deposit_policies WHERE code='CMS_NO_DEPOSIT' AND version=1),"
                     + " default_cancellation_policy_id=(SELECT id FROM cancellation_policies WHERE"
                     + " code='CMS_FLEXIBLE' AND version=1), default_tax_percent=0");
+        jdbc.update("DELETE FROM notification_deliveries");
+        jdbc.update("DELETE FROM notifications");
         jdbc.update("DELETE FROM payment_webhook_events");
         jdbc.update("DELETE FROM invoice_lines");
         for (String table : new String[] {"invoices", "payment_transactions", "booking_charges"}) {

@@ -22,6 +22,47 @@
                 </div>
 
                 <ul class="navbar-nav ms-auto mb-lg-0 align-items-center">
+                    <li id="reception-notifications" class="nav-item dropdown me-2"
+                        sec:authorize="hasAnyAuthority('notification.manage','booking.read.any')"
+                        th:data-feed="@{/admin/api/receptionist/notifications}"
+                        th:data-stream="@{/admin/api/receptionist/stream}"
+                        th:data-read="@{/admin/api/receptionist/notifications/read}"
+                        th:data-booking-base="@{/admin/bookings/}"
+                        th:data-can-read="${#authorization.expression(&quot;hasAuthority('notification.manage')&quot;)}"
+                        th:data-can-booking="${#authorization.expression(&quot;hasAuthority('booking.read.any')&quot;)}"
+                        th:data-empty="#{reception.notificationsEmpty}"
+                        th:data-title="#{reception.notification}"
+                        th:data-new="#{reception.newUpdate}"
+                        th:data-event-booking-created="#{reception.event.booking_created}"
+                        th:data-event-booking-confirmed="#{reception.event.booking_confirmed}"
+                        th:data-event-booking-cancelled="#{reception.event.booking_cancelled}"
+                        th:data-event-booking-rejected="#{reception.event.booking_rejected}"
+                        th:data-event-booking-no-show="#{reception.event.booking_no_show}"
+                        th:data-event-booking-changed="#{reception.event.booking_changed}"
+                        th:data-event-booking-change-requested="#{reception.event.booking_change_requested}"
+                        th:data-event-booking-room-checked-in="#{reception.event.booking_room_checked_in}"
+                        th:data-event-booking-room-checked-out="#{reception.event.booking_room_checked_out}"
+                        th:data-event-payment-collected="#{reception.event.payment_collected}"
+                        th:data-event-payment-refunded="#{reception.event.payment_refunded}">
+                        <button class="btn btn-link nav-link position-relative" data-bs-toggle="dropdown"
+                                th:aria-label="#{reception.notifications}" aria-expanded="false">
+                            <i class="bi bi-bell fs-5" aria-hidden="true"></i>
+                            <span class="badge bg-danger" data-unread hidden></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-0">
+                            <div class="p-3 border-bottom d-flex gap-3 justify-content-between align-items-center">
+                                <strong th:text="#{reception.notifications}"></strong>
+                                <button type="button" class="btn btn-sm btn-light" data-mark-read
+                                        sec:authorize="hasAuthority('notification.manage')" th:text="#{reception.markRead}"></button>
+                            </div>
+                            <div class="reception-bell-list" data-notices></div>
+                            <label class="p-3 small d-flex align-items-center gap-2 border-top">
+                                <input type="checkbox" class="form-check-input m-0" data-notification-sound>
+                                <span th:text="#{reception.sound}"></span>
+                            </label>
+                        </div>
+                    </li>
+
                     <!-- Language Selector Dropdown -->
                     <li class="nav-item dropdown me-3">
                         <a class="nav-link dropdown-toggle text-gray-600 d-flex align-items-center gap-1"

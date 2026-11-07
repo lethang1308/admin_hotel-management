@@ -43,96 +43,250 @@
             </div>
         </div>
 
-        <div class="sidebar-menu">
+        <nav class="sidebar-menu" aria-label="CMS" th:with="p=${currentPath ?: ''}">
             <ul class="menu">
-                <li class="sidebar-title" th:text="#{admin.sidebar.menu}">Menu</li>
-
-                <li class="sidebar-item" th:classappend="${currentPath == '/admin'} ? 'active' : ''">
-                    <a th:href="@{/admin}" class="sidebar-link">
-                        <i class="bi bi-grid-fill"></i>
-                        <span th:text="#{admin.nav.dashboard}">Dashboard</span>
+                <li class="cms-nav-item" sec:authorize="hasRole('ADMIN')">
+                    <a class="cms-nav-link" th:href="@{/admin}" th:classappend="${p == '/admin'} ? 'active'"
+                       th:attr="aria-current=${p == '/admin' ? 'page' : null}">
+                        <i class="bi bi-grid-fill" aria-hidden="true"></i><span th:text="#{admin.nav.dashboard}"></span>
                     </a>
                 </li>
-
-                <li class="sidebar-title" th:text="#{admin.sidebar.identityAccess}">Identity &amp; Access</li>
-
-                <li class="sidebar-item has-sub" sec:authorize="hasRole('ADMIN') and hasAuthority('account.manage')"
-                    th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active' : ''">
-                    <a href="#" class="sidebar-link">
-                        <i class="bi bi-people-fill"></i>
-                        <span th:text="#{admin.nav.users}">User Management</span>
-                    </a>
-                    <ul class="submenu"
-                        th:classappend="${currentPath != null and currentPath.startsWith('/admin/users')} ? 'active submenu-open' : ''">
-                        <li class="submenu-item"
-                            th:classappend="${currentPath == '/admin/users'} ? 'active' : ''">
-                            <a th:href="@{/admin/users}" class="submenu-link" th:text="#{admin.nav.allUsers}">All Users</a>
-                        </li>
-                        <li class="submenu-item"
-                            th:classappend="${currentPath == '/admin/users/create'} ? 'active' : ''">
-                            <a th:href="@{/admin/users/create}" class="submenu-link" th:text="#{admin.nav.createUser}">Create User</a>
-                        </li>
-                    </ul>
+                <li class="cms-nav-module" sec:authorize="hasAnyAuthority('booking.read.any','report.shift')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="reception" th:open="${p.startsWith('/admin/receptionist')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-reception-4" aria-hidden="true"></i><span th:text="#{reception.title}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('booking.read.any','report.shift')">
+                                <a class="cms-nav-link" th:href="@{/admin/receptionist}" th:classappend="${p.startsWith('/admin/receptionist')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/receptionist')) ? 'page' : null}" >
+                                    <i class="bi bi-speedometer2" aria-hidden="true"></i><span th:text="#{reception.title}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
                 </li>
-
-                <li class="sidebar-item"
-                    sec:authorize="hasRole('ADMIN') and hasAuthority('role.manage')"
-                    th:classappend="${currentPath != null and currentPath.startsWith('/admin/roles')} ? 'active' : ''">
-                    <a th:href="@{/admin/roles}" class="sidebar-link">
-                        <i class="bi bi-shield-lock-fill"></i>
-                        <span th:text="#{admin.nav.roles}">Roles &amp; RBAC</span>
-                    </a>
+                <li class="cms-nav-module" sec:authorize="hasAnyAuthority('account.manage','customer.read','audit.read','profile.manage.own','role.manage')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="identity" th:open="${p.startsWith('/admin/users') and p != '/admin/users/create' or p == '/admin/users/create' or p.startsWith('/admin/employees') or p.startsWith('/admin/customers') or p.startsWith('/admin/roles') or p.startsWith('/admin/audit-logs') or p.startsWith('/admin/profile/password')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-person-lock" aria-hidden="true"></i><span th:text="#{admin.sidebar.identityAccess}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN') and hasAuthority('account.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/users}" th:classappend="${p.startsWith('/admin/users') and p != '/admin/users/create'} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/users') and p != '/admin/users/create') ? 'page' : null}" >
+                                    <i class="bi bi-people-fill" aria-hidden="true"></i><span th:text="#{admin.nav.allUsers}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN') and hasAuthority('account.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/users/create}" th:classappend="${p == '/admin/users/create'} ? 'active'"
+                                   th:attr="aria-current=${(p == '/admin/users/create') ? 'page' : null}" >
+                                    <i class="bi bi-person-plus" aria-hidden="true"></i><span th:text="#{admin.nav.createUser}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('account.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/employees}" th:classappend="${p.startsWith('/admin/employees')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/employees')) ? 'page' : null}" >
+                                    <i class="bi bi-person-badge" aria-hidden="true"></i><span th:text="#{cms.employees.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('customer.read')">
+                                <a class="cms-nav-link" th:href="@{/admin/customers}" th:classappend="${p.startsWith('/admin/customers')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/customers')) ? 'page' : null}" >
+                                    <i class="bi bi-people" aria-hidden="true"></i><span th:text="#{cms.customers.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN') and hasAuthority('role.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/roles}" th:classappend="${p.startsWith('/admin/roles')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/roles')) ? 'page' : null}" >
+                                    <i class="bi bi-shield-lock" aria-hidden="true"></i><span th:text="#{admin.nav.roles}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('audit.read')">
+                                <a class="cms-nav-link" th:href="@{/admin/audit-logs}" th:classappend="${p.startsWith('/admin/audit-logs')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/audit-logs')) ? 'page' : null}" >
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i><span th:text="#{cms.audit.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('profile.manage.own')">
+                                <a class="cms-nav-link" th:href="@{/admin/profile/password}" th:classappend="${p.startsWith('/admin/profile/password')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/profile/password')) ? 'page' : null}" >
+                                    <i class="bi bi-key" aria-hidden="true"></i><span th:text="#{cms.changePassword}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
                 </li>
-
-                <li class="sidebar-item" sec:authorize="hasAuthority('account.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/employees')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/employees}"><i class="bi bi-person-badge" aria-hidden="true"></i><span th:text="#{cms.employees.title}"></span></a></li>
-<li class="sidebar-item" sec:authorize="hasAuthority('customer.read')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/customers')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/customers}"><i class="bi bi-people" aria-hidden="true"></i><span th:text="#{cms.customers.title}"></span></a></li>
-<li class="sidebar-item" sec:authorize="hasAuthority('audit.read')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/audit-logs')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/audit-logs}"><i class="bi bi-clock-history" aria-hidden="true"></i><span th:text="#{cms.audit.title}"></span></a></li>
-<li class="sidebar-item" sec:authorize="hasAuthority('profile.manage.own')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/profile/password')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/profile/password}"><i class="bi bi-key" aria-hidden="true"></i><span th:text="#{cms.changePassword}"></span></a></li>
-<li class="sidebar-title" sec:authorize="hasAnyAuthority('hotel.manage','room.read','room.manage')" th:text="#{hotel.nav.title}"></li><li class="sidebar-item" sec:authorize="hasAuthority('hotel.manage')" th:classappend="${currentPath == '/admin/hotel' or (currentPath != null and currentPath.startsWith('/admin/hotel/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/hotel}"><i class="bi bi-building-gear" aria-hidden="true"></i><span th:text="#{hotel.settings.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.manage')" th:classappend="${currentPath == '/admin/floors' or (currentPath != null and currentPath.startsWith('/admin/floors/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/floors}"><i class="bi bi-layers" aria-hidden="true"></i><span th:text="#{hotel.floors.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.manage')" th:classappend="${currentPath == '/admin/amenities' or (currentPath != null and currentPath.startsWith('/admin/amenities/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/amenities}"><i class="bi bi-stars" aria-hidden="true"></i><span th:text="#{hotel.amenities.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.manage')" th:classappend="${currentPath == '/admin/room-types' or (currentPath != null and currentPath.startsWith('/admin/room-types/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/room-types}"><i class="bi bi-collection" aria-hidden="true"></i><span th:text="#{hotel.types.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.read')" th:classappend="${currentPath == '/admin/rooms' or (currentPath != null and currentPath.startsWith('/admin/rooms/') and currentPath != '/admin/rooms/grid')} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/rooms}"><i class="bi bi-door-open" aria-hidden="true"></i><span th:text="#{hotel.rooms.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.read')" th:classappend="${currentPath == '/admin/rooms/grid' or (currentPath != null and currentPath.startsWith('/admin/rooms/grid/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/rooms/grid}"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span th:text="#{hotel.grid.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('room.block.manage')" th:classappend="${currentPath == '/admin/room-blocks' or (currentPath != null and currentPath.startsWith('/admin/room-blocks/'))} ? 'active' : ''"><a class="sidebar-link" th:href="@{/admin/room-blocks}"><i class="bi bi-tools" aria-hidden="true"></i><span th:text="#{hotel.block.title}"></span></a></li>
-<li class="sidebar-title" sec:authorize="hasAnyAuthority('pricing.manage','voucher.manage','policy.manage','room.read','booking.create')" th:text="#{price.nav}"></li><li class="sidebar-item" sec:authorize="hasAnyAuthority('pricing.manage','room.read')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/pricing') and currentPath != '/admin/pricing/simulator'}?'active':''"><a class="sidebar-link" th:href="@{/admin/pricing}"><i class="bi bi-calendar3" aria-hidden="true"></i><span th:text="#{price.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAnyAuthority('pricing.manage','booking.create')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/pricing/simulator')}?'active':''"><a class="sidebar-link" th:href="@{/admin/pricing/simulator}"><i class="bi bi-calculator" aria-hidden="true"></i><span th:text="#{price.simulator.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('voucher.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/vouchers')}?'active':''"><a class="sidebar-link" th:href="@{/admin/vouchers}"><i class="bi bi-ticket-perforated" aria-hidden="true"></i><span th:text="#{price.vouchers.title}"></span></a></li><li class="sidebar-item" sec:authorize="hasAuthority('policy.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/policies')}?'active':''"><a class="sidebar-link" th:href="@{/admin/policies}"><i class="bi bi-shield-check" aria-hidden="true"></i><span th:text="#{price.policies.title}"></span></a></li>
-<li class="sidebar-title" sec:authorize="hasRole('ADMIN')" th:text="#{admin.sidebar.developerSystem}">Developer &amp; System</li>
-
-                <li class="sidebar-item" sec:authorize="hasRole('ADMIN')">
-                    <a th:href="@{/swagger-ui.html}" target="_blank" rel="noopener" class="sidebar-link">
-                        <i class="bi bi-file-earmark-code-fill"></i>
-                        <span th:text="#{admin.nav.swagger}">OpenAPI / Swagger</span>
-                    </a>
+                <li class="cms-nav-module" sec:authorize="hasAnyAuthority('hotel.manage','room.read','room.manage','room.block.manage')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="hotel" th:open="${p.startsWith('/admin/hotel') or p.startsWith('/admin/floors') or p.startsWith('/admin/amenities') or p.startsWith('/admin/room-types') or p.startsWith('/admin/rooms') and !p.startsWith('/admin/rooms/grid') or p.startsWith('/admin/rooms/grid') or p.startsWith('/admin/room-blocks')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-building" aria-hidden="true"></i><span th:text="#{hotel.nav.title}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('hotel.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/hotel}" th:classappend="${p.startsWith('/admin/hotel')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/hotel')) ? 'page' : null}" >
+                                    <i class="bi bi-building-gear" aria-hidden="true"></i><span th:text="#{hotel.settings.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/floors}" th:classappend="${p.startsWith('/admin/floors')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/floors')) ? 'page' : null}" >
+                                    <i class="bi bi-layers" aria-hidden="true"></i><span th:text="#{hotel.floors.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/amenities}" th:classappend="${p.startsWith('/admin/amenities')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/amenities')) ? 'page' : null}" >
+                                    <i class="bi bi-stars" aria-hidden="true"></i><span th:text="#{hotel.amenities.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/room-types}" th:classappend="${p.startsWith('/admin/room-types')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/room-types')) ? 'page' : null}" >
+                                    <i class="bi bi-collection" aria-hidden="true"></i><span th:text="#{hotel.types.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.read')">
+                                <a class="cms-nav-link" th:href="@{/admin/rooms}" th:classappend="${p.startsWith('/admin/rooms') and !p.startsWith('/admin/rooms/grid')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/rooms') and !p.startsWith('/admin/rooms/grid')) ? 'page' : null}" >
+                                    <i class="bi bi-door-open" aria-hidden="true"></i><span th:text="#{hotel.rooms.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.read')">
+                                <a class="cms-nav-link" th:href="@{/admin/rooms/grid}" th:classappend="${p.startsWith('/admin/rooms/grid')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/rooms/grid')) ? 'page' : null}" >
+                                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span th:text="#{hotel.grid.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('room.block.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/room-blocks}" th:classappend="${p.startsWith('/admin/room-blocks')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/room-blocks')) ? 'page' : null}" >
+                                    <i class="bi bi-tools" aria-hidden="true"></i><span th:text="#{hotel.block.title}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
                 </li>
-
-<li class="sidebar-title" sec:authorize="hasRole('ADMIN') or hasAnyAuthority('booking.read.any','booking.cancel.any','service.read','service.manage','payment.collect','payment.refund','invoice.manage')" th:text="#{ops.workspace}"></li>
-<li class="sidebar-item" sec:authorize="hasAuthority('booking.read.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/bookings') and currentPath != '/admin/bookings/calendar'} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/bookings}"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span th:text="#{ops.bookings}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAuthority('booking.read.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/bookings/calendar')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/bookings/calendar}"><i class="bi bi-calendar-week" aria-hidden="true"></i><span th:text="#{ops.calendar}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAuthority('booking.cancel.any')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/cancellations')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/cancellations}"><i class="bi bi-calendar-x" aria-hidden="true"></i><span th:text="#{ops.cancellations}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAnyAuthority('service.read','service.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/services')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/services}"><i class="bi bi-cup-hot" aria-hidden="true"></i><span th:text="#{ops.services}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/payments')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/payments}"><i class="bi bi-wallet2" aria-hidden="true"></i><span th:text="#{ops.payments}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/debts')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/debts}"><i class="bi bi-receipt" aria-hidden="true"></i><span th:text="#{ops.debts}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasAuthority('invoice.manage')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/invoices')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/invoices}"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span th:text="#{ops.invoices}"></span></a>
-</li>
-<li class="sidebar-item" sec:authorize="hasRole('ADMIN')" th:classappend="${currentPath != null and currentPath.startsWith('/admin/inventory/reconcile')} ? 'active' : ''">
-    <a class="sidebar-link" th:href="@{/admin/inventory/reconcile}"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span th:text="#{ops.reconcile}"></span></a>
-</li>
-
-                <li class="sidebar-item" sec:authorize="hasRole('ADMIN')">
-                    <a th:href="@{/actuator/health}" target="_blank" rel="noopener" class="sidebar-link">
-                        <i class="bi bi-heart-pulse-fill"></i>
-                        <span th:text="#{admin.nav.health}">System Health</span>
-                    </a>
+                <li class="cms-nav-module" sec:authorize="hasAnyAuthority('pricing.manage','voucher.manage','policy.manage','room.read','booking.create')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="pricing" th:open="${p.startsWith('/admin/pricing') and !p.startsWith('/admin/pricing/simulator') or p.startsWith('/admin/pricing/simulator') or p.startsWith('/admin/vouchers') or p.startsWith('/admin/policies')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-tags" aria-hidden="true"></i><span th:text="#{price.nav}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('pricing.manage','room.read')">
+                                <a class="cms-nav-link" th:href="@{/admin/pricing}" th:classappend="${p.startsWith('/admin/pricing') and !p.startsWith('/admin/pricing/simulator')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/pricing') and !p.startsWith('/admin/pricing/simulator')) ? 'page' : null}" >
+                                    <i class="bi bi-calendar3" aria-hidden="true"></i><span th:text="#{price.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('pricing.manage','booking.create')">
+                                <a class="cms-nav-link" th:href="@{/admin/pricing/simulator}" th:classappend="${p.startsWith('/admin/pricing/simulator')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/pricing/simulator')) ? 'page' : null}" >
+                                    <i class="bi bi-calculator" aria-hidden="true"></i><span th:text="#{price.simulator.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('voucher.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/vouchers}" th:classappend="${p.startsWith('/admin/vouchers')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/vouchers')) ? 'page' : null}" >
+                                    <i class="bi bi-ticket-perforated" aria-hidden="true"></i><span th:text="#{price.vouchers.title}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('policy.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/policies}" th:classappend="${p.startsWith('/admin/policies')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/policies')) ? 'page' : null}" >
+                                    <i class="bi bi-shield-check" aria-hidden="true"></i><span th:text="#{price.policies.title}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+                <li class="cms-nav-module" sec:authorize="hasRole('ADMIN') or hasAnyAuthority('booking.read.any','booking.cancel.any','service.read','service.manage','payment.collect','payment.refund','invoice.manage')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="operations" th:open="${p.startsWith('/admin/bookings') and !p.startsWith('/admin/bookings/calendar') or p.startsWith('/admin/bookings/calendar') or p.startsWith('/admin/cancellations') or p.startsWith('/admin/services') or p.startsWith('/admin/service-categories') or p.startsWith('/admin/payments') or p.startsWith('/admin/debts') or p.startsWith('/admin/invoices') or p.startsWith('/admin/inventory/reconcile')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-journal-bookmark" aria-hidden="true"></i><span th:text="#{ops.workspace}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('booking.read.any')">
+                                <a class="cms-nav-link" th:href="@{/admin/bookings}" th:classappend="${p.startsWith('/admin/bookings') and !p.startsWith('/admin/bookings/calendar')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/bookings') and !p.startsWith('/admin/bookings/calendar')) ? 'page' : null}" >
+                                    <i class="bi bi-journal-bookmark" aria-hidden="true"></i><span th:text="#{ops.bookings}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('booking.read.any')">
+                                <a class="cms-nav-link" th:href="@{/admin/bookings/calendar}" th:classappend="${p.startsWith('/admin/bookings/calendar')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/bookings/calendar')) ? 'page' : null}" >
+                                    <i class="bi bi-calendar-week" aria-hidden="true"></i><span th:text="#{ops.calendar}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('booking.cancel.any')">
+                                <a class="cms-nav-link" th:href="@{/admin/cancellations}" th:classappend="${p.startsWith('/admin/cancellations')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/cancellations')) ? 'page' : null}" >
+                                    <i class="bi bi-calendar-x" aria-hidden="true"></i><span th:text="#{ops.cancellations}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('service.read','service.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/services}" th:classappend="${p.startsWith('/admin/services') or p.startsWith('/admin/service-categories')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/services') or p.startsWith('/admin/service-categories')) ? 'page' : null}" >
+                                    <i class="bi bi-cup-hot" aria-hidden="true"></i><span th:text="#{ops.services}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')">
+                                <a class="cms-nav-link" th:href="@{/admin/payments}" th:classappend="${p.startsWith('/admin/payments')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/payments')) ? 'page' : null}" >
+                                    <i class="bi bi-wallet2" aria-hidden="true"></i><span th:text="#{ops.payments}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')">
+                                <a class="cms-nav-link" th:href="@{/admin/debts}" th:classappend="${p.startsWith('/admin/debts')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/debts')) ? 'page' : null}" >
+                                    <i class="bi bi-receipt" aria-hidden="true"></i><span th:text="#{ops.debts}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('invoice.manage')">
+                                <a class="cms-nav-link" th:href="@{/admin/invoices}" th:classappend="${p.startsWith('/admin/invoices')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/invoices')) ? 'page' : null}" >
+                                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span th:text="#{ops.invoices}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN')">
+                                <a class="cms-nav-link" th:href="@{/admin/inventory/reconcile}" th:classappend="${p.startsWith('/admin/inventory/reconcile')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/admin/inventory/reconcile')) ? 'page' : null}" >
+                                    <i class="bi bi-clipboard-check" aria-hidden="true"></i><span th:text="#{ops.reconcile}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
+                </li>
+                <li class="cms-nav-module" sec:authorize="hasRole('ADMIN')">
+                    <details class="cms-nav-group" name="cms-modules" data-nav-module="system" th:open="${p.startsWith('/swagger-ui.html') or p.startsWith('/actuator/health')}">
+                        <summary class="cms-nav-summary">
+                            <i class="bi bi-gear" aria-hidden="true"></i><span th:text="#{admin.sidebar.developerSystem}"></span>
+                            <i class="bi bi-chevron-down cms-nav-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <ul class="cms-nav-children">
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN')">
+                                <a class="cms-nav-link" th:href="@{/swagger-ui.html}" th:classappend="${p.startsWith('/swagger-ui.html')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/swagger-ui.html')) ? 'page' : null}" target="_blank" rel="noopener">
+                                    <i class="bi bi-file-earmark-code" aria-hidden="true"></i><span th:text="#{admin.nav.swagger}"></span>
+                                </a>
+                            </li>
+                            <li class="cms-nav-item" sec:authorize="hasRole('ADMIN')">
+                                <a class="cms-nav-link" th:href="@{/actuator/health}" th:classappend="${p.startsWith('/actuator/health')} ? 'active'"
+                                   th:attr="aria-current=${(p.startsWith('/actuator/health')) ? 'page' : null}" target="_blank" rel="noopener">
+                                    <i class="bi bi-heart-pulse" aria-hidden="true"></i><span th:text="#{admin.nav.health}"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </details>
                 </li>
             </ul>
-        </div>
+        </nav>
     </div>
 </div>
 </body>

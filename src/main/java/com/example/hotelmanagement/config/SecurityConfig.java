@@ -170,6 +170,22 @@ public class SecurityConfig {
                                         .hasRole(SecurityConstants.ROLE_ADMIN);
                             }
 
+                            auth.requestMatchers(
+                                            request ->
+                                                    request.getDispatcherType()
+                                                                    == jakarta.servlet
+                                                                            .DispatcherType.ASYNC
+                                                            && (request.getRequestURI()
+                                                                            .equals(
+                                                                                    request
+                                                                                                    .getContextPath()
+                                                                                            + "/admin/api/receptionist/stream")
+                                                                    || request.getRequestURI()
+                                                                            .equals(
+                                                                                    request
+                                                                                                    .getContextPath()
+                                                                                            + "/admin/api/receptionist/notifications/stream")))
+                                    .permitAll();
                             auth.requestMatchers("/admin/users/**")
                                     .hasRole(SecurityConstants.ROLE_ADMIN);
                             auth.requestMatchers("/admin/**")

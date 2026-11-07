@@ -76,12 +76,15 @@ public class AdminOperationsController {
     @PostMapping("/payments/shift/{action}")
     @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund')")
     public String shift(
-            @PathVariable String action, @RequestParam BigDecimal cash, RedirectAttributes flash) {
+            @PathVariable String action,
+            @RequestParam BigDecimal cash,
+            @RequestParam(required = false) String notes,
+            RedirectAttributes flash) {
         web.mutate(
                 () -> {
                     db.require(action.equals("open") || action.equals("close"), "input");
-                    if (action.equals("open")) payments.open(cash);
-                    else payments.close(cash);
+                    if (action.equals("open")) payments.open(cash, notes);
+                    else payments.close(cash, notes);
                 },
                 flash);
         return "redirect:/admin/payments";

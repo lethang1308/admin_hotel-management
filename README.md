@@ -169,3 +169,5 @@ Xem thư mục [`docs/`](docs/):
 - [CMS_PRICING_PROMOTIONS.md](docs/CMS_PRICING_PROMOTIONS.md): giá phòng, voucher, cọc/hủy/phụ phí và mô phỏng báo giá
 - [CMS Admin: Đặt phòng và vận hành](docs/CMS_BOOKINGS.md)
 - [DATABASE.md](docs/DATABASE.md): cấu trúc cơ sở dữ liệu
+
+- [Dashboard lễ tân và sidebar](docs/CMS_RECEPTIONIST.md)

@@ -6,6 +6,8 @@ import com.example.hotelmanagement.modules.allocation.RoomAllocationService;
 import com.example.hotelmanagement.modules.customer.service.IdentityDocumentCrypto;
 import com.example.hotelmanagement.modules.hotel.service.HotelInventoryCoordinator;
 import com.example.hotelmanagement.modules.payment.BookingLedger;
+import com.example.hotelmanagement.modules.payment.FrontDeskPaymentService;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +28,7 @@ public class StayService {
     private final RoomAllocationService allocation;
     private final BookingService bookings;
     private final BookingLedger ledger;
+    private final FrontDeskPaymentService payments;
     private final IdentityDocumentCrypto documents;
 
     public record Guest(String name, String type, String documentType, String document) {}
@@ -53,7 +56,7 @@ public class StayService {
         db.require(
                 db.count(
                                 "SELECT COUNT(*) FROM room_night_claims WHERE room_allocation_id=?"
-                                    + " AND stay_date=?",
+                                        + " AND stay_date=?",
                                 assigned.id("id"),
                                 today)
                         == 1,
@@ -143,6 +146,18 @@ public class StayService {
 
     @PreAuthorize("hasAuthority('booking.checkout')")
     public void checkOut(long id, long lineId, String reason) {
+        completeCheckout(id, lineId, reason, null);
+    }
+
+    public record Settlement(
+            String key, String method, BigDecimal amount, BigDecimal expectedDebt) {}
+
+    @PreAuthorize("hasAuthority('booking.checkout')")
+    public void checkOutAndCollect(long id, long lineId, String reason, Settlement settlement) {
+        completeCheckout(id, lineId, reason, settlement);
+    }
+
+    private void completeCheckout(long id, long lineId, String reason, Settlement settlement) {
         var booking = bookings.lock(id);
         var line = db.bookingRoom(id, lineId);
         if (line.s("status").equals("CHECKED_OUT")) return;
@@ -191,7 +206,7 @@ public class StayService {
             if (night.date("stay_date").isBefore(cutoff)) {
                 db.update(
                         "UPDATE booking_room_nights SET stay_status='STAYED',recognized_at=? WHERE"
-                            + " id=?",
+                                + " id=?",
                         ts(now),
                         night.id("id"));
             } else bookings.releaseNight(id, lineId, night, null, "EARLY-OUT", "CANCELLED");
@@ -203,6 +218,21 @@ public class StayService {
                                         l.id("id") != lineId
                                                 && Set.of("PENDING", "CONFIRMED", "CHECKED_IN")
                                                         .contains(l.s("status")));
+        if (settlement != null) {
+            db.require(
+                    settlement.expectedDebt() != null
+                            && ledger.balance(id).debt().compareTo(settlement.expectedDebt()) == 0,
+                    "priceChanged");
+            db.require(settlement.amount() != null && settlement.amount().signum() >= 0, "amount");
+            if (settlement.amount().signum() > 0)
+                payments.collect(
+                        id,
+                        settlement.key(),
+                        "PAYMENT",
+                        settlement.method(),
+                        settlement.amount(),
+                        reason);
+        }
         if (finalRoom) {
             var debt = ledger.balance(id).debt();
             db.require(debt.signum() <= 0, "debt", debt);
@@ -229,13 +259,13 @@ public class StayService {
     void endStay(long allocationId, Instant now) {
         db.update(
                 "UPDATE room_allocations SET status='COMPLETED',occupied_until_at=?,ended_by=?"
-                    + " WHERE id=?",
+                        + " WHERE id=?",
                 ts(now),
                 db.actor(),
                 allocationId);
         db.update(
                 "UPDATE stay_guests SET departed_at=? WHERE room_allocation_id=? AND departed_at IS"
-                    + " NULL",
+                        + " NULL",
                 ts(now),
                 allocationId);
     }
@@ -246,7 +276,6 @@ public class StayService {
         Duration delta =
                 checkIn ? Duration.between(now, expected) : Duration.between(expected, now);
         if (delta.isNegative() || delta.isZero()) return;
-        long minutes = Math.max(1, (delta.getSeconds() + 59) / 60);
         String kind = checkIn ? "EARLY_CHECKIN" : "LATE_CHECKOUT";
         if (!checkIn
                 && db.count(
@@ -265,43 +294,23 @@ public class StayService {
                     Map.of(),
                     Map.of("line", line.id("id")),
                     null);
-        var rules =
-                db.rows(
-                        """
-                SELECT * FROM surcharge_policies WHERE is_active=TRUE AND kind=?
-                AND (room_type_id IS NULL OR room_type_id=?)
-                AND (from_minutes IS NULL OR from_minutes<=?) AND (to_minutes IS NULL OR to_minutes>?)
-                ORDER BY priority DESC,id DESC LIMIT 1
-                """,
-                        kind,
-                        line.id("room_type_id"),
-                        minutes,
-                        minutes);
-        if (rules.isEmpty()) return;
+        var quote = surcharge(booking, line, now, checkIn);
+        if (quote == null) return;
         ledger.editable(id);
-        var rule = rules.get(0);
-        var nights = bookings.nights(line.id("id"));
-        BigDecimal base = nights.get(checkIn ? 0 : nights.size() - 1).money("net_room_amount");
-        BigDecimal value = rule.money("amount_value");
-        BigDecimal amount =
-                switch (rule.s("amount_type")) {
-                    case "PERCENT_NIGHT" -> percent(base, value);
-                    case "PER_HOUR" -> value.multiply(BigDecimal.valueOf(minutes))
-                            .divide(BigDecimal.valueOf(60), 0, RoundingMode.HALF_UP);
-                    default -> vnd(value);
-                };
-        var taxRate = bookings.policy(booking).taxPercent();
+        var ruleId = quote.policyId();
+        var amount = quote.amount();
+        var taxRate = quote.taxPercent();
         ledger.charge(
                 id,
                 line.id("id"),
                 null,
                 null,
                 null,
-                rule.id("id"),
+                ruleId,
                 null,
                 kind + ":" + line.id("id"),
                 "SURCHARGE",
-                rule.s("name"),
+                quote.name(),
                 db.today(),
                 BigDecimal.ONE,
                 amount,
@@ -314,14 +323,137 @@ public class StayService {
                     null,
                     null,
                     null,
-                    rule.id("id"),
+                    ruleId,
                     null,
                     kind + "-TAX:" + line.id("id"),
                     "TAX",
-                    "VAT · " + rule.s("name"),
+                    "VAT · " + quote.name(),
                     db.today(),
                     BigDecimal.ONE,
                     tax,
                     taxRate);
+    }
+
+    public record Surcharge(Long policyId, String name, BigDecimal amount, BigDecimal taxPercent) {
+        @JsonProperty
+        public BigDecimal total() {
+            return amount.add(percent(amount, taxPercent));
+        }
+    }
+
+    private Surcharge surcharge(Row booking, Row line, Instant now, boolean checkIn) {
+        Instant expected = line.time(checkIn ? "expected_check_in_at" : "expected_check_out_at");
+        Duration delta =
+                checkIn ? Duration.between(now, expected) : Duration.between(expected, now);
+        if (delta.isNegative() || delta.isZero()) return null;
+        long minutes = Math.max(1, (delta.getSeconds() + 59) / 60);
+        String kind = checkIn ? "EARLY_CHECKIN" : "LATE_CHECKOUT";
+        var rules =
+                db.rows(
+                        """
+                SELECT * FROM surcharge_policies WHERE is_active=TRUE AND kind=?
+                AND (room_type_id IS NULL OR room_type_id=?)
+                AND (from_minutes IS NULL OR from_minutes<=?) AND (to_minutes IS NULL OR to_minutes>?)
+                ORDER BY priority DESC,id DESC LIMIT 1
+                """,
+                        kind,
+                        line.id("room_type_id"),
+                        minutes,
+                        minutes);
+        if (rules.isEmpty()) return null;
+        var rule = rules.get(0);
+        var nights = bookings.nights(line.id("id"));
+        BigDecimal base = nights.get(checkIn ? 0 : nights.size() - 1).money("net_room_amount");
+        BigDecimal value = rule.money("amount_value");
+        BigDecimal amount =
+                switch (rule.s("amount_type")) {
+                    case "PERCENT_NIGHT" -> percent(base, value);
+                    case "PER_HOUR" -> value.multiply(BigDecimal.valueOf(minutes))
+                            .divide(BigDecimal.valueOf(60), 0, RoundingMode.HALF_UP);
+                    default -> vnd(value);
+                };
+        var taxRate = bookings.policy(booking).taxPercent();
+
+        return new Surcharge(rule.id("id"), rule.s("name"), amount, taxRate);
+    }
+
+    public record StayPreview(
+            BigDecimal currentDebt,
+            BigDecimal projectedDebt,
+            BigDecimal credit,
+            BigDecimal changeFee,
+            BigDecimal depositShortfall,
+            Surcharge surcharge,
+            int adults,
+            int children,
+            String status,
+            String roomStatus,
+            boolean finalRoom) {}
+
+    @PreAuthorize("hasAuthority('booking.checkin')")
+    @Transactional(readOnly = true)
+    public StayPreview previewCheckIn(long id, long lineId) {
+        return preview(id, lineId, true);
+    }
+
+    @PreAuthorize("hasAuthority('booking.checkout')")
+    @Transactional(readOnly = true)
+    public StayPreview previewCheckOut(long id, long lineId) {
+        return preview(id, lineId, false);
+    }
+
+    private StayPreview preview(long id, long lineId, boolean checkIn) {
+        var booking = db.one("SELECT * FROM bookings WHERE id=?", id);
+        var line = db.bookingRoom(id, lineId);
+        db.require(line.s("status").equals(checkIn ? "CONFIRMED" : "CHECKED_IN"), "state");
+        var assigned = bookings.activeAllocation(lineId);
+        var now = Instant.now();
+        var balance = ledger.balance(id);
+        var surcharge = surcharge(booking, line, now, checkIn);
+        BigDecimal credit = ZERO, fee = ZERO;
+        if (!checkIn) {
+            LocalDate today = db.today();
+            LocalDate cutoff =
+                    today.isAfter(assigned.date("from_date"))
+                            ? today
+                            : assigned.date("from_date").plusDays(1);
+            var unused =
+                    bookings.nights(lineId).stream()
+                            .filter(n -> !n.date("stay_date").isBefore(cutoff))
+                            .toList();
+            for (var n : unused)
+                credit =
+                        credit.add(
+                                db.sum(
+                                        "SELECT COALESCE(SUM(amount),0) FROM booking_charges WHERE"
+                                                + " booking_room_night_id=? AND status='POSTED'",
+                                        n.id("id")));
+            fee = BookingService.unusedNightsFee(bookings.policy(booking), unused, now);
+        }
+        var projected =
+                balance.debt()
+                        .subtract(credit)
+                        .add(fee)
+                        .add(surcharge == null ? ZERO : surcharge.total());
+        var required = booking.money("deposit_required_amount").min(balance.total().max(ZERO));
+        boolean finalRoom =
+                bookings.lines(id).stream()
+                        .noneMatch(
+                                l ->
+                                        l.id("id") != lineId
+                                                && Set.of("PENDING", "CONFIRMED", "CHECKED_IN")
+                                                        .contains(l.s("status")));
+        return new StayPreview(
+                balance.debt(),
+                projected,
+                credit,
+                fee,
+                required.subtract(balance.net()).max(ZERO),
+                surcharge,
+                line.n("adults"),
+                line.n("children"),
+                line.s("status"),
+                db.one("SELECT status FROM rooms WHERE id=?", assigned.id("room_id")).s("status"),
+                finalRoom);
     }
 }

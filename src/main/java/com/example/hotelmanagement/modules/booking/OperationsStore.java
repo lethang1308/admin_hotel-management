@@ -4,9 +4,11 @@ import com.example.hotelmanagement.common.exception.BusinessException;
 import com.example.hotelmanagement.common.util.CmsActor;
 import com.example.hotelmanagement.common.util.CmsMessages;
 import com.example.hotelmanagement.modules.audit.service.AuditLogService;
+import com.example.hotelmanagement.modules.reception.ReceptionOutboxDispatcher;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -30,6 +32,7 @@ public class OperationsStore {
     private final CmsMessages messages;
     private final AuditLogService audit;
     private final ObjectMapper mapper;
+    private final ApplicationEventPublisher events;
 
     public record Row(Map<String, Object> data) {
         public String s(String key) {
@@ -222,5 +225,6 @@ public class OperationsStore {
                 bookingId,
                 json(Map.of("bookingId", bookingId)),
                 ts(Instant.now()));
+        events.publishEvent(new ReceptionOutboxDispatcher.Wake());
     }
 }

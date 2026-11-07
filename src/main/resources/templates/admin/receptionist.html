@@ -1,6 +1,128 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
- th:replace="~{admin/layouts/main :: layout(#{cms.reception.title}, ~{::#cms-page}, ~{})}"><body><div id="cms-page">
- <div class="page-heading"><h3 th:text="#{cms.reception.title}"></h3></div>
-<p class="text-muted" th:text="#{cms.reception.subtitle}"></p><div class="card"><div class="card-body"><h4 th:text="#{cms.quickAccess}"></h4><div class="d-flex flex-wrap gap-3 mt-3"><a class="btn btn-primary" sec:authorize="hasAuthority('customer.read')" th:href="@{/admin/customers}" th:text="#{cms.customers.title}"></a><a class="btn btn-outline-primary" sec:authorize="hasAuthority('profile.manage.own')" th:href="@{/admin/profile/password}" th:text="#{cms.changePassword}"></a><a class="btn btn-outline-primary" sec:authorize="hasAuthority('account.manage')" th:href="@{/admin/employees}" th:text="#{cms.employees.title}"></a></div></div></div>
-</div></body></html>
+ th:replace="~{admin/layouts/main :: layout(#{reception.title},~{::#receptionist-page},~{::#reception-scripts})}">
+<body>
+<section id="receptionist-page" th:data-fragment="@{/admin/receptionist/fragment}"
+ th:data-preview="@{/admin/api/receptionist/rooms/}" th:data-service="@{/admin/receptionist/services}"
+ th:data-checkin="@{/admin/receptionist/quick-checkin}" th:data-checkout="@{/admin/receptionist/quick-checkout}"
+ th:data-action-base="@{/admin/receptionist/quick-}" th:data-no-show="@{/admin/receptionist/no-show/}"
+ th:data-load-error="#{reception.loadError}" th:data-expired="#{reception.expired}"
+ th:data-loading="#{reception.loading}" th:data-ready-error="#{reception.notReady}"
+ th:data-debt="#{reception.balance}" th:data-fee="#{reception.changeFee}" th:data-credit="#{reception.credit}"
+ th:data-surcharge="#{reception.surcharge}" th:data-current-debt="#{reception.currentDebt}"
+ th:data-refund="#{reception.refundHint}" th:data-deposit="#{reception.depositShort}"
+ th:data-can-collect="${#authorization.expression(&quot;hasAuthority('payment.collect')&quot;)}">
+<div class="reception-heading">
+<div><h3 th:text="#{reception.title}"></h3><p class="text-muted mb-0" th:text="#{reception.subtitle}"></p></div>
+<div class="d-flex gap-2 flex-wrap">
+<a class="btn btn-outline-primary" th:href="@{/admin/bookings/calendar}" sec:authorize="hasAuthority('booking.read.any')"><i class="bi bi-calendar-week me-2" aria-hidden="true"></i><span th:text="#{reception.calendar}"></span></a>
+<a class="btn btn-primary" th:href="@{/admin/bookings/create}" sec:authorize="hasAuthority('booking.create')"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span th:text="#{reception.create}"></span></a>
+</div></div>
+<p class="small text-muted reception-refresh-line"><span data-live-state th:text="#{reception.live}"></span><span class="ms-2 text-danger" data-refresh-error hidden th:text="#{reception.refreshError}"></span>
+<button type="button" class="btn btn-link btn-sm" data-refresh-desk th:text="#{reception.refresh}"></button></p>
+
+<div id="desk-live" th:fragment="live" th:data-timezone="${desk.timezone}">
+<div class="reception-shift" th:if="${desk.shift != null}">
+<div class="d-flex justify-content-between gap-3 flex-wrap align-items-start">
+<div><span class="badge" th:classappend="${desk.shift.id == null ? 'bg-light-warning' : 'bg-light-success'}"
+ th:text="${desk.shift.id == null} ? #{reception.noShift} : #{reception.shiftNumber(${desk.shift.id})}"></span>
+<p class="mb-0 mt-2 small text-muted" th:if="${desk.shift.openedAt != null}"><span th:text="#{reception.openedAt}"></span>
+<time data-local-time th:datetime="${desk.shift.openedAt}" th:text="${desk.shift.openedAt}"></time></p>
+<p class="mb-0 mt-2 text-muted" th:unless="${desk.shift.employeeAvailable}" th:text="#{reception.employeeMissing}"></p></div>
+<div class="d-flex gap-3 align-items-center flex-wrap"><div class="text-muted small"><span th:text="${#temporals.format(desk.today,'dd/MM/yyyy')}"></span> · <span th:text="${desk.timezone}"></span></div>
+<button type="button" class="btn btn-outline-primary" data-shift-action="open" th:if="${desk.shift.id == null and desk.shift.employeeAvailable}" th:text="#{reception.openShift}"></button>
+<button type="button" class="btn btn-outline-primary" data-shift-action="close" th:if="${desk.shift.id != null}" th:data-expected="${desk.shift.expected}" th:text="#{reception.closeShift}"></button></div>
+</div>
+<div class="reception-cash" th:if="${desk.shift.id != null}">
+<div><small th:text="#{reception.opening}"></small><strong th:text="${#numbers.formatDecimal(desk.shift.opening,1,'COMMA',0,'POINT')}+' ₫'"></strong></div>
+<div><small th:text="#{reception.collected}"></small><strong th:text="${#numbers.formatDecimal(desk.shift.collected,1,'COMMA',0,'POINT')}+' ₫'"></strong></div>
+<div><small th:text="#{reception.refunded}"></small><strong th:text="${#numbers.formatDecimal(desk.shift.refunded,1,'COMMA',0,'POINT')}+' ₫'"></strong></div>
+<div><small th:text="#{reception.expectedCash}"></small><strong th:text="${#numbers.formatDecimal(desk.shift.expected,1,'COMMA',0,'POINT')}+' ₫'"></strong></div>
+</div></div>
+<div class="reception-kpis"><div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i><span th:text="#{reception.arrivals}"></span></div><strong th:text="${desk.kpis.arrivals == null ? '—' : desk.kpis.arrivals}"></strong></div>
+<div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span th:text="#{reception.departures}"></span></div><strong th:text="${desk.kpis.departures == null ? '—' : desk.kpis.departures}"></strong></div>
+<div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-house-check" aria-hidden="true"></i><span th:text="#{reception.occupied}"></span></div><strong th:text="${desk.kpis.occupied == null ? '—' : desk.kpis.occupied}"></strong></div>
+<div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-door-open" aria-hidden="true"></i><span th:text="#{reception.ready}"></span></div><strong th:text="${desk.kpis.ready == null ? '—' : desk.kpis.ready}"></strong></div>
+<div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-tools" aria-hidden="true"></i><span th:text="#{reception.attention}"></span></div><strong th:text="${desk.kpis.attention == null ? '—' : desk.kpis.attention}"></strong></div>
+<div class="reception-kpi"><div class="reception-kpi-label"><i class="bi bi-hourglass-split" aria-hidden="true"></i><span th:text="#{reception.pending}"></span></div><strong th:text="${desk.kpis.pending == null ? '—' : desk.kpis.pending}"></strong></div></div>
+<div class="card reception-alerts" sec:authorize="hasAuthority('booking.read.any')"
+ th:if="${!#lists.isEmpty(desk.lateArrivals) or !#lists.isEmpty(desk.lateDepartures)}">
+<div class="card-header"><h5 class="mb-0" th:text="#{reception.alerts}"></h5></div>
+<div class="card-body pt-0">
+<div th:replace="~{admin/fragments/reception-queues :: alerts(${desk.lateDepartures},'departure')}"></div>
+<div th:replace="~{admin/fragments/reception-queues :: alerts(${desk.lateArrivals},'arrival')}"></div>
+</div></div>
+<div class="card" sec:authorize="hasAuthority('booking.read.any')">
+<div class="card-header pb-0"><nav class="reception-tabs" th:aria-label="#{reception.queues}"><button type="button" class="btn btn-primary" data-queue-tab="arrivals" aria-pressed="true"><span th:text="#{reception.arrivals}"></span> <span class="badge bg-light-secondary" th:text="${desk.kpis.arrivals}"></span></button>
+<button type="button" class="btn btn-light" data-queue-tab="departures" aria-pressed="false"><span th:text="#{reception.departures}"></span> <span class="badge bg-light-secondary" th:text="${desk.kpis.departures}"></span></button>
+<button type="button" class="btn btn-light" data-queue-tab="pending" aria-pressed="false"><span th:text="#{reception.pending}"></span> <span class="badge bg-light-secondary" th:text="${desk.kpis.pending}"></span></button></nav></div>
+<div class="card-body">
+<p class="text-muted small my-3" th:text="#{reception.listLimit}"></p>
+<div th:replace="~{admin/fragments/reception-queues :: queue(${desk.arrivals},'arrivals')}"></div>
+<div th:replace="~{admin/fragments/reception-queues :: queue(${desk.departures},'departures')}"></div>
+<div th:replace="~{admin/fragments/reception-queues :: queue(${desk.pending},'pending')}"></div>
+<a class="btn btn-link btn-sm mt-2" th:href="@{/admin/bookings}" th:text="#{reception.allBookings}"></a>
+</div></div></div>
+
+<dialog class="reception-dialog" id="shift-dialog" th:data-open="@{/admin/receptionist/shift/open}" th:data-close="@{/admin/receptionist/shift/close}">
+<div class="reception-dialog-heading"><h5 th:text="#{reception.shift}"></h5><button type="button" class="btn-close" data-close-dialog th:aria-label="#{reception.close}"></button></div>
+<form method="post" th:action="@{/admin/receptionist/shift/open}" id="shift-form">
+<p data-shift-expected class="text-muted small"></p>
+<label class="form-label"><span th:text="#{reception.countedCash}"></span><input class="form-control" name="cash" type="number" min="0" step="1" max="9999999999999" required></label>
+<label class="form-label"><span th:text="#{reception.shiftNotes}"></span><textarea name="notes" class="form-control" maxlength="1000" rows="3"></textarea></label>
+<p class="small text-muted" th:text="#{reception.differenceHint}"></p>
+<button class="btn btn-primary" th:text="#{reception.save}"></button>
+</form></dialog>
+
+<dialog class="reception-dialog" id="reason-dialog">
+<div class="reception-dialog-heading"><h5 data-reason-title></h5><button type="button" class="btn-close" data-close-dialog th:aria-label="#{reception.close}"></button></div>
+<form method="post" th:action="@{/admin/receptionist/quick-confirm/0}" id="reason-form">
+<p class="text-muted" data-reason-code></p><input type="hidden" name="line">
+<label class="form-label"><span th:text="#{reception.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<button class="btn btn-primary mt-3" th:text="#{reception.confirmAction}"></button>
+</form></dialog>
+
+<dialog class="reception-dialog reception-dialog-wide" id="stay-dialog">
+<div class="reception-dialog-heading"><h5 data-stay-title></h5><button type="button" class="btn-close" data-close-dialog th:aria-label="#{reception.close}"></button></div>
+<p class="text-muted small" data-stay-code></p>
+<div class="alert alert-light-danger" role="alert" data-stay-error hidden></div>
+<p data-stay-loading th:text="#{reception.loading}"></p>
+<div data-stay-ready hidden>
+<div class="reception-stay-summary" data-stay-summary></div>
+<details class="my-3"><summary th:text="#{reception.charges}"></summary><div class="table-responsive"><table class="table table-sm"><tbody data-stay-charges></tbody></table></div></details>
+<form method="post" th:action="@{/admin/receptionist/quick-checkin}" id="stay-form">
+<input type="hidden" name="booking"><input type="hidden" name="line"><input type="hidden" name="key"><input type="hidden" name="expectedDebt">
+<div data-guests></div>
+<div class="reception-settlement" sec:authorize="hasAuthority('payment.collect')">
+<label class="form-label"><span th:text="#{reception.collectNow}"></span><input class="form-control" name="amount" type="number" min="0" step="1" max="9999999999999" value="0" required></label>
+<label class="form-label"><span th:text="#{reception.method}"></span><select name="method" class="form-select"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label>
+</div>
+<input sec:authorize="!hasAuthority('payment.collect')" type="hidden" name="amount" value="0">
+<label class="form-label"><span th:text="#{reception.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<div class="alert alert-light-warning small mt-3" data-stay-refund hidden><span th:text="#{reception.refundHint}"></span>
+<a th:href="@{/admin/debts(direction='REFUND')}" sec:authorize="hasAuthority('payment.refund')" th:text="#{reception.refunds}"></a></div>
+<button class="btn btn-primary mt-3" data-submit-stay th:text="#{reception.confirmAction}"></button>
+</form>
+<form method="post" th:action="@{/admin/receptionist/services}" id="desk-service-form" class="border-top pt-3 mt-4" sec:authorize="hasAuthority('service.usage.manage')">
+<input type="hidden" name="booking"><input type="hidden" name="line"><input type="hidden" name="key">
+<h6 th:text="#{reception.addService}"></h6>
+<div class="reception-settlement"><label class="form-label"><span th:text="#{reception.service}"></span><select class="form-select" name="service" required></select></label>
+<label class="form-label"><span th:text="#{reception.quantity}"></span><input class="form-control" name="quantity" type="number" value="1" min="0.001" step="0.001" max="9999999.999" required></label></div>
+<button class="btn btn-outline-primary" th:text="#{reception.addService}"></button>
+</form>
+</div></dialog>
+
+<template id="guest-template"><fieldset class="border rounded p-3 mb-3">
+<legend class="float-none w-auto fs-6 px-1" data-guest-title></legend>
+<input type="hidden" name="guestType">
+<div class="reception-guest-fields">
+<label class="form-label"><span th:text="#{reception.guestName}"></span><input class="form-control" name="guestName" maxlength="150" required autocomplete="off"></label>
+<label class="form-label"><span th:text="#{reception.documentType}"></span><select name="documentType" class="form-select"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option></select></label>
+<label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="documentNumber" maxlength="60" autocomplete="off"></label>
+</div></fieldset></template>
+<span hidden id="desk-labels" th:data-checkin="#{reception.checkin}" th:data-checkout="#{reception.checkout}"
+ th:data-confirm="#{reception.confirm}" th:data-reject="#{reception.reject}" th:data-no-show="#{reception.noShow}"
+ th:data-adult="#{reception.adult}" th:data-child="#{reception.child}"></span>
+</section>
+<th:block id="reception-scripts"><script th:src="@{/admin/assets/static/js/cms-receptionist.js}"></script></th:block>
+</body></html>

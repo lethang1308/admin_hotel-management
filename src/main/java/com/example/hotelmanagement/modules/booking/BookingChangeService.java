@@ -77,6 +77,7 @@ public class BookingChangeService {
                 Map.of(),
                 Map.of("request", id, "difference", p.difference()),
                 reason);
+        db.event("CHANGE-REQUEST:" + id, "BOOKING_CHANGE_REQUESTED", bookingId);
         return id;
     }
 

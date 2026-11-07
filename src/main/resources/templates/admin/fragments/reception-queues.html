@@ -1,0 +1,53 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><body>
+<div th:fragment="queue(rows,kind)" class="reception-queue" th:data-queue="${kind}" th:hidden="${kind != 'arrivals'}">
+<div class="table-responsive"><table class="table align-middle reception-table">
+<thead><tr><th th:text="#{reception.guest}"></th><th th:text="#{reception.room}"></th><th th:text="#{reception.expected}"></th><th th:text="#{reception.balance}"></th><th th:text="#{reception.actions}"></th></tr></thead>
+<tbody>
+<tr th:if="${#lists.isEmpty(rows)}"><td colspan="5" class="text-muted text-center py-5" th:text="#{reception.emptyQueue}"></td></tr>
+<tr th:each="r:${rows}">
+<td><a class="fw-semibold" th:href="@{/admin/bookings/{id}(id=${r.bookingId})}" th:text="${r.code}"></a>
+<strong class="d-block mt-1" th:text="${r.name}"></strong>
+<a class="small text-muted" th:href="'tel:'+ ${r.phone}" th:text="${r.phone}"></a></td>
+<td><span th:text="${r.room ?: '—'}"></span><small class="d-block text-muted" th:text="${r.type}"></small>
+<span class="badge mt-1" th:if="${r.roomStatus != null}"
+ th:classappend="${r.roomStatus == 'AVAILABLE' ? 'bg-light-success' : r.roomStatus == 'CLEANING' ? 'bg-light-warning' : 'bg-light-danger'}"
+ th:text="#{${'hotel.status.'+r.roomStatus}}"></span>
+<small th:if="${r.lineId == null}" th:text="#{reception.roomCount(${r.rooms})}"></small></td>
+<td><time data-local-time th:datetime="${r.expected}" th:text="${r.expected}"></time>
+<span class="badge bg-light-primary d-block mt-1" th:text="#{${'ops.'+r.status}}"></span>
+<small th:if="${r.expires != null and r.status == 'PENDING'}" class="d-block text-warning mt-1" data-countdown th:data-until="${r.expires}"></small></td>
+<td class="text-nowrap"><span th:text="${#numbers.formatDecimal(r.debt,1,'COMMA',0,'POINT')}+' ₫'"></span>
+<small class="d-block text-muted"><span th:text="#{reception.netPaid}"></span> <span th:text="${#numbers.formatDecimal(r.paid,1,'COMMA',0,'POINT')}"></span></small>
+<small th:if="${r.depositDue.signum()>0}" class="d-block text-danger"><span th:text="#{reception.depositShort}"></span> <span th:text="${#numbers.formatDecimal(r.depositDue,1,'COMMA',0,'POINT')}"></span></small></td>
+<td><div class="d-flex flex-wrap gap-2" th:if="${r.lineId != null}">
+<th:block th:if="${r.status == 'CONFIRMED'}"><button type="button" class="btn btn-sm btn-outline-primary"
+    data-desk-action="checkin" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.checkin')" th:text="#{reception.checkin}"></button></th:block>
+<th:block th:if="${r.status == 'CHECKED_IN'}"><button type="button" class="btn btn-sm btn-outline-primary"
+    data-desk-action="checkout" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{reception.checkout}"></button></th:block>
+<a class="btn btn-sm btn-light" th:href="@{/admin/bookings/{id}(id=${r.bookingId})}" th:text="#{reception.details}"></a>
+</div><div class="d-flex flex-wrap gap-2" th:if="${r.lineId == null}">
+<button type="button" class="btn btn-sm btn-outline-primary"
+    data-desk-action="confirm" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.confirm')" th:text="#{reception.confirm}"></button> <button type="button" class="btn btn-sm btn-outline-danger"
+    data-desk-action="reject" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.confirm')" th:text="#{reception.reject}"></button>
+<a class="btn btn-sm btn-light" th:href="@{/admin/bookings/{id}(id=${r.bookingId})}" th:text="#{reception.details}"></a>
+</div></td>
+</tr></tbody></table></div></div>
+<div th:fragment="alerts(rows,kind)">
+<article th:each="r:${rows}" class="reception-alert" th:data-alert="${kind}">
+<i class="bi bi-clock" aria-hidden="true"></i>
+<div class="flex-grow-1"><strong th:text="${r.name}"></strong> · <span th:text="${r.room ?: r.code}"></span>
+<small class="d-block text-muted"><span th:text="${kind == 'arrival'} ? #{reception.lateArrival} : #{reception.lateDeparture}"></span> ·
+<time data-local-time th:datetime="${r.expected}" th:text="${r.expected}"></time></small></div>
+<div class="d-flex gap-2 flex-wrap"><a class="btn btn-sm btn-light" th:href="'tel:'+ ${r.phone}" th:text="#{reception.call}"></a>
+<th:block th:if="${kind == 'arrival'}"><button type="button" class="btn btn-sm btn-outline-danger"
+    data-desk-action="no-show" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.no_show')" th:text="#{reception.noShow}"></button></th:block><th:block th:unless="${kind == 'arrival'}"><button type="button" class="btn btn-sm btn-outline-primary"
+    data-desk-action="checkout" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
+    th:data-code="${r.code}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{reception.checkout}"></button></th:block>
+<a th:if="${kind == 'departure'}" class="btn btn-sm btn-outline-primary"
+ th:href="@{/admin/bookings/{id}(id=${r.bookingId})}" sec:authorize="hasAuthority('booking.update.any')" th:text="#{reception.extend}"></a>
+</div></article></div></body></html>

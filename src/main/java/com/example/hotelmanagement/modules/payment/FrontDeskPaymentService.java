@@ -83,7 +83,7 @@ public class FrontDeskPaymentService {
             var original =
                     db.one(
                             "SELECT * FROM payment_transactions WHERE id=? AND booking_id=? FOR"
-                                + " UPDATE",
+                                    + " UPDATE",
                             parent,
                             bookingId);
             db.require(
@@ -132,7 +132,7 @@ public class FrontDeskPaymentService {
             var open =
                     db.rows(
                             "SELECT id FROM work_sessions WHERE employee_id=? AND closed_at IS NULL"
-                                + " FOR UPDATE",
+                                    + " FOR UPDATE",
                             employee);
             db.require(open.size() == 1, "shift");
             session = open.get(0).id("id");
@@ -168,43 +168,76 @@ public class FrontDeskPaymentService {
         return id;
     }
 
-    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund')")
+    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund','report.shift')")
     public void open(BigDecimal opening) {
+        open(opening, null);
+    }
+
+    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund','report.shift')")
+    public void open(BigDecimal opening, String notes) {
         long employee = lockEmployee();
         if (db.count(
                         "SELECT COUNT(*) FROM work_sessions WHERE employee_id=? AND closed_at IS"
-                            + " NULL",
+                                + " NULL",
                         employee)
                 > 0) return;
         long id =
                 db.insert(
                         "work_sessions",
-                        "employee_id,opening_cash,opened_at",
+                        "employee_id,opening_cash,opened_at,notes",
                         employee,
                         money(opening, true),
-                        ts(Instant.now()));
+                        ts(Instant.now()),
+                        db.optional(notes, 1000));
         db.audit("SHIFT_OPEN", "WORK_SESSION", id, Map.of(), Map.of("employeeId", employee), null);
     }
 
-    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund')")
+    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund','report.shift')")
     public void close(BigDecimal closing) {
+        close(closing, null);
+    }
+
+    @PreAuthorize("hasAnyAuthority('payment.collect','payment.refund','report.shift')")
+    public void close(BigDecimal closing, String notes) {
         long employee = lockEmployee();
         var open =
                 db.rows(
                         "SELECT * FROM work_sessions WHERE employee_id=? AND closed_at IS NULL FOR"
-                            + " UPDATE",
+                                + " UPDATE",
                         employee);
         if (open.isEmpty()) return;
         var shift = open.get(0);
         long id = shift.id("id");
+        BigDecimal counted = money(closing, true);
+        BigDecimal expected =
+                shift.money("opening_cash")
+                        .add(
+                                db.sum(
+                                        """
+                SELECT COALESCE(SUM(CASE WHEN kind='REFUND' THEN -amount ELSE amount END),0)
+                FROM payment_transactions WHERE work_session_id=? AND method='CASH' AND status='SUCCEEDED'
+                """,
+                                        id));
+        BigDecimal difference = counted.subtract(expected);
+        String explanation =
+                difference.signum() == 0 ? db.optional(notes, 1000) : db.required(notes, 1000);
+        String savedNotes = Objects.toString(shift.s("notes"), "");
+        if (explanation != null) savedNotes += "\nBàn giao / Handover: " + explanation;
         Instant now = Instant.now();
         Instant minimum = shift.time("opened_at").plusMillis(1);
         db.update(
-                "UPDATE work_sessions SET closed_at=?,counted_closing_cash=? WHERE id=?",
+                "UPDATE work_sessions SET closed_at=?,counted_closing_cash=?,notes=? WHERE id=?",
                 ts(now.isAfter(minimum) ? now : minimum),
-                money(closing, true),
+                counted,
+                savedNotes,
                 id);
-        db.audit("SHIFT_CLOSE", "WORK_SESSION", id, Map.of(), Map.of("countedCash", closing), null);
+        db.audit(
+                "SHIFT_CLOSE",
+                "WORK_SESSION",
+                id,
+                Map.of(),
+                Map.of("countedCash", counted, "expectedCash", expected, "difference", difference),
+                explanation);
     }
 
     private long lockEmployee() {
