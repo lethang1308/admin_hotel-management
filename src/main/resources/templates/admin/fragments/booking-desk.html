@@ -79,7 +79,7 @@
 <legend class="float-none w-auto fs-6 px-1" data-guest-title></legend><input type="hidden" name="guestType">
 <div class="booking-input-grid">
 <label class="form-label"><span th:text="#{reception.guestName}"></span><input class="form-control" name="guestName" maxlength="150" required autocomplete="off"></label>
-<label class="form-label"><span th:text="#{reception.documentType}"></span><select class="form-select" name="documentType"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option></select></label>
+<label class="form-label"><span th:text="#{stay.birth}"></span><input class="form-control" type="date" name="dateOfBirth" th:max="${bookingToday}"></label><label class="form-label"><span th:text="#{stay.nationality}"></span><input class="form-control" name="nationality" maxlength="2" pattern="[a-zA-Z]{2}"></label><label class="form-label"><span th:text="#{reception.documentType}"></span><select class="form-select" name="documentType"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option></select></label>
 <label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="documentNumber" maxlength="60" autocomplete="off"></label>
 </div></fieldset></template>
 

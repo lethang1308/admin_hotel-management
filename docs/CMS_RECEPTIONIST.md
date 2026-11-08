@@ -4,6 +4,8 @@ Mở `/admin/receptionist`. Tài khoản RECEPTIONIST vào trang này sau khi đ
 
 Quản lý đặt phòng tại quầy (tra cứu phòng trống, walk-in, xếp/đổi phòng, gia hạn, rút ngắn và no-show) được hướng dẫn trong [CMS_RECEPTIONIST_BOOKINGS.md](CMS_RECEPTIONIST_BOOKINGS.md).
 
+Thủ tục nhận/trả phòng, QR, đăng ký khách, quyết toán, PDF và hàng đợi dọn phòng xem tại [CMS_RECEPTIONIST_STAYS.md](CMS_RECEPTIONIST_STAYS.md).
+
 ## Ca trực và số liệu
 
 Dashboard hiển thị ca của chính nhân viên đang đăng nhập. Mở ca với số tiền mặt ban đầu và ghi chú, kết ca với số tiền kiểm đếm và lời giải thích khi có chênh lệch. Tiền mặt dự kiến bằng tiền đầu ca cộng thu CASH thành công, trừ hoàn CASH thành công. Chuyển khoản được theo dõi trong công nợ của đơn, riêng với két tiền mặt.

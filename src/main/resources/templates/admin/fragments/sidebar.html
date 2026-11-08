@@ -59,11 +59,12 @@
                         </summary>
                         <ul class="cms-nav-children">
                             <li class="cms-nav-item" sec:authorize="hasAnyAuthority('booking.read.any','report.shift')">
-                                <a class="cms-nav-link" th:href="@{/admin/receptionist}" th:classappend="${p.startsWith('/admin/receptionist')} ? 'active'"
-                                   th:attr="aria-current=${(p.startsWith('/admin/receptionist')) ? 'page' : null}" >
+                                <a class="cms-nav-link" th:href="@{/admin/receptionist}" th:classappend="${p == '/admin/receptionist'} ? 'active'"
+                                   th:attr="aria-current=${p == '/admin/receptionist' ? 'page' : null}" >
                                     <i class="bi bi-speedometer2" aria-hidden="true"></i><span th:text="#{reception.title}"></span>
                                 </a>
                             </li>
+                            <li class="cms-nav-item" sec:authorize="hasAuthority('booking.read.any')"><a class="cms-nav-link" th:href="@{/admin/receptionist/stays}" th:classappend="${p == '/admin/receptionist/stays'} ? 'active'"><i class="bi bi-door-open" aria-hidden="true"></i><span th:text="#{stay.title}"></span></a></li>
                         </ul>
                     </details>
                 </li>

@@ -98,6 +98,12 @@ public class AdminBookingController {
     public String detail(@PathVariable long id, Model model, Authentication authentication) {
         var detail = queries.detail(id);
         model.addAttribute("d", detail);
+        model.addAttribute(
+                "inHouseLines",
+                detail.rooms().stream()
+                        .filter(r -> "CHECKED_IN".equals(r.s("status")))
+                        .map(r -> r.id("id"))
+                        .toList());
         web.key(model);
         model.addAttribute("refundKey", OperationsStore.code(""));
         var serviceKeys = new HashMap<Long, String>();
@@ -318,24 +324,20 @@ public class AdminBookingController {
             @RequestParam List<String> guestType,
             @RequestParam List<String> documentType,
             @RequestParam List<String> documentNumber,
+            @RequestParam(required = false) List<String> dateOfBirth,
+            @RequestParam(required = false) List<String> nationality,
             RedirectAttributes flash) {
         web.mutate(
                 () -> {
-                    int count = guestName.size();
-                    db.require(
-                            count <= 100
-                                    && guestType.size() == count
-                                    && documentType.size() == count
-                                    && documentNumber.size() == count,
-                            "guests");
-                    var guests = new ArrayList<StayService.Guest>();
-                    for (int i = 0; i < count; i++)
-                        guests.add(
-                                new StayService.Guest(
-                                        guestName.get(i),
-                                        guestType.get(i),
-                                        documentType.get(i),
-                                        documentNumber.get(i)));
+                    var guests =
+                            StayGuestForms.parse(
+                                    db,
+                                    guestName,
+                                    guestType,
+                                    documentType,
+                                    documentNumber,
+                                    dateOfBirth,
+                                    nationality);
                     stays.checkIn(id, line, guests, reason);
                 },
                 flash);

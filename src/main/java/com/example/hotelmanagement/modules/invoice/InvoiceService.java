@@ -26,6 +26,7 @@ import java.util.*;
 @PreAuthorize("hasAuthority('invoice.manage')")
 public class InvoiceService {
     private final OperationsStore db;
+    private final com.example.hotelmanagement.modules.reception.QrCodeSupport qr;
 
     @Value("${app.invoice.directory:uploads/invoices-private}")
     private String directory;
@@ -52,7 +53,7 @@ public class InvoiceService {
         db.require(
                 db.count(
                                 "SELECT COUNT(*) FROM booking_rooms WHERE booking_id=? AND status"
-                                    + " IN ('PENDING','CONFIRMED','CHECKED_IN')",
+                                        + " IN ('PENDING','CONFIRMED','CHECKED_IN')",
                                 booking)
                         == 0,
                 "invoiceState");
@@ -142,8 +143,8 @@ public class InvoiceService {
         reason = db.required(reason, 1000);
         db.update(
                 "UPDATE invoices SET"
-                    + " status='VOID',void_reason=?,voided_at=CURRENT_TIMESTAMP(6),voided_by=?"
-                    + " WHERE id=?",
+                        + " status='VOID',void_reason=?,voided_at=CURRENT_TIMESTAMP(6),voided_by=?"
+                        + " WHERE id=?",
                 reason,
                 db.actor(),
                 id);
@@ -255,6 +256,16 @@ public class InvoiceService {
                                 number(invoice, "subtotal_amount"),
                                 number(invoice, "tax_amount"),
                                 number(invoice, "total_amount"));
+        String footer =
+                "<table style='margin-top:24pt'><tr><td style='width:30%;border:0'><img"
+                        + " style='width:85pt;height:85pt' src='"
+                        + qr.image("HOTEL-INVOICE:" + invoice.s("invoice_number"))
+                        + "' /><p style='font-size:8pt'>QR định danh hóa đơn nội bộ</p></td><td"
+                        + " style='width:35%;border:0;text-align:center;vertical-align:top'><b>Khách"
+                        + " hàng</b><p>(Ký, ghi rõ họ tên)</p></td><td"
+                        + " style='width:35%;border:0;text-align:center;vertical-align:top'><b>Đại"
+                        + " diện khách sạn</b><p>(Ký, ghi rõ họ tên)</p></td></tr></table>";
+        html = html.replace("</body>", footer + "</body>");
         try (var regular = new ClassPathResource("fonts/NotoSans-Regular.ttf").getInputStream();
                 var bold = new ClassPathResource("fonts/NotoSans-Bold.ttf").getInputStream();
                 var output = new ByteArrayOutputStream()) {

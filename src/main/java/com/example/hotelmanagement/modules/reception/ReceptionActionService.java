@@ -2,7 +2,6 @@ package com.example.hotelmanagement.modules.reception;
 
 import com.example.hotelmanagement.modules.booking.*;
 import com.example.hotelmanagement.modules.hotel.service.HotelInventoryCoordinator;
-import com.example.hotelmanagement.modules.payment.FrontDeskPaymentService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,7 +19,6 @@ public class ReceptionActionService {
     private final HotelInventoryCoordinator inventory;
     private final OperationsStore db;
     private final StayService stays;
-    private final FrontDeskPaymentService payments;
 
     @PreAuthorize("hasAuthority('booking.checkin')")
     public void checkIn(
@@ -32,10 +30,15 @@ public class ReceptionActionService {
             String method,
             BigDecimal amount) {
         inventory.lock();
-        var order = db.lockBooking(booking);
+        db.lockBooking(booking);
         if ("CHECKED_IN".equals(db.bookingRoom(booking, line).s("status"))) return;
         db.require(amount != null && amount.signum() >= 0, "amount");
-        if (amount.signum() > 0) payments.collect(booking, key, "PAYMENT", method, amount, reason);
-        stays.checkIn(booking, line, guests, reason);
+        var preview = stays.previewCheckIn(booking, line);
+        stays.checkInAndCollect(
+                booking,
+                line,
+                guests,
+                reason,
+                new StayService.Settlement(key, method, amount, preview.projectedDebt()));
     }
 }

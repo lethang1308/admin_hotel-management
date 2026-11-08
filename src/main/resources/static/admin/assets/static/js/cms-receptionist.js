@@ -8,15 +8,11 @@
     const shiftForm = document.getElementById('shift-form');
     const reasonDialog = document.getElementById('reason-dialog');
     const reasonForm = document.getElementById('reason-form');
-    const stayDialog = document.getElementById('stay-dialog');
-    const stayForm = document.getElementById('stay-form');
-    const serviceForm = document.getElementById('desk-service-form');
     let activeTab = 'arrivals';
     let refreshing = false;
     let activeAction;
     let activeBooking;
     let activeLine;
-    let previewSerial = 0;
     const csrf = () => ({
         [document.querySelector('meta[name="csrf-header"]').content]:
             document.querySelector('meta[name="csrf-token"]').content
@@ -98,11 +94,7 @@
         activeBooking = button.dataset.booking;
         activeLine = button.dataset.line;
         if (activeAction === 'checkin' || activeAction === 'checkout') {
-            stayForm.reset();
-            stayDialog.querySelector('[data-stay-title]').textContent = labels[activeAction];
-            stayDialog.querySelector('[data-stay-code]').textContent = button.dataset.code;
-            stayDialog.showModal();
-            await loadPreview();
+            return; // The shared stay workflow handles these actions.
         } else {
             reasonForm.reset();
             reasonDialog.querySelector('[data-reason-title]').textContent = activeAction === 'no-show' ? labels.noShow : labels[activeAction];
@@ -112,105 +104,6 @@
             reasonDialog.showModal();
         }
     });
-    function summaryRow(label, value) {
-        const node = document.createElement('div');
-        const title = document.createElement('small');
-        title.className = 'd-block text-muted';
-        title.textContent = label;
-        const total = document.createElement('strong');
-        total.textContent = money(value);
-        node.append(title, total);
-        return node;
-    }
-    async function loadPreview() {
-        const serial = ++previewSerial;
-        const error = stayDialog.querySelector('[data-stay-error]');
-        const loading = stayDialog.querySelector('[data-stay-loading]');
-        const ready = stayDialog.querySelector('[data-stay-ready]');
-        error.hidden = true; loading.hidden = false; ready.hidden = true;
-        try {
-            const params = new URLSearchParams({ booking: activeBooking, action: activeAction });
-            const response = await request(root.dataset.preview + activeLine + '/preview?' + params, { headers: { Accept: 'application/json' } });
-            const data = await response.json();
-            if (serial !== previewSerial || !stayDialog.open) return;
-            const p = data.preview;
-            stayForm.action = root.dataset[activeAction];
-            stayForm.elements.booking.value = activeBooking;
-            stayForm.elements.line.value = activeLine;
-            stayForm.elements.key.value = data.key;
-            stayForm.elements.expectedDebt.value = p.projectedDebt;
-            stayForm.elements.amount.value = root.dataset.canCollect === 'true'
-                ? Math.max(0, activeAction === 'checkin' ? p.depositShortfall : p.projectedDebt) : 0;
-            const summary = stayDialog.querySelector('[data-stay-summary]');
-            summary.replaceChildren(
-                summaryRow(root.dataset.currentDebt, p.currentDebt),
-                summaryRow(root.dataset.debt, p.projectedDebt),
-                summaryRow(root.dataset.deposit, p.depositShortfall),
-                summaryRow(root.dataset.surcharge, p.surcharge ? p.surcharge.total : 0)
-            );
-            if (Number(p.credit)) summary.append(summaryRow(root.dataset.credit, p.credit));
-            if (Number(p.changeFee)) summary.append(summaryRow(root.dataset.fee, p.changeFee));
-            const rows = stayDialog.querySelector('[data-stay-charges]');
-            rows.replaceChildren();
-            data.charges.forEach(charge => {
-                const row = document.createElement('tr');
-                const description = document.createElement('td');
-                description.textContent = charge.description;
-                const value = document.createElement('td');
-                value.className = 'text-end text-nowrap';
-                value.textContent = money(charge.amount);
-                row.append(description, value); rows.append(row);
-            });
-            const guests = stayForm.querySelector('[data-guests]');
-            // A service refresh during checkout never replaces entered identity documents.
-            guests.replaceChildren();
-            if (activeAction === 'checkin') {
-                for (let index = 0; index < p.adults + p.children; index++) {
-                    const adult = index < p.adults;
-                    const fields = document.getElementById('guest-template').content.cloneNode(true);
-                    fields.querySelector('[data-guest-title]').textContent = (adult ? labels.adult : labels.child) + ' ' + (index + 1);
-                    fields.querySelector('[name=guestType]').value = adult ? 'ADULT' : 'CHILD';
-                    fields.querySelector('[name=documentNumber]').required = adult;
-                    guests.append(fields);
-                }
-            }
-            stayDialog.querySelector('[data-stay-refund]').hidden = Number(p.projectedDebt) >= 0;
-            const notReady = activeAction === 'checkin' && p.roomStatus !== 'AVAILABLE';
-            stayDialog.querySelector('[data-submit-stay]').disabled = notReady;
-            if (notReady) { error.textContent = root.dataset.readyError; error.hidden = false; }
-            if (serviceForm) {
-                serviceForm.hidden = activeAction !== 'checkout' || !data.services?.length;
-                serviceForm.elements.booking.value = activeBooking;
-                serviceForm.elements.line.value = activeLine;
-                serviceForm.elements.key.value = crypto.randomUUID().replaceAll('-', '').slice(0, 24).toUpperCase();
-                const options = data.services?.map(item => new Option(item.name + ' · ' + money(item.unit_price) + '/' + item.unit, item.id)) || [];
-                serviceForm.elements.service.replaceChildren(...options);
-            }
-            ready.hidden = false;
-        } catch (failure) {
-            error.textContent = failure.message;
-            error.hidden = false;
-        } finally {
-            if (serial === previewSerial) loading.hidden = true;
-        }
-    }
-    serviceForm?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const button = serviceForm.querySelector('button');
-        button.disabled = true;
-        try {
-            await request(root.dataset.service, { method: 'POST', headers: { ...csrf(), Accept: 'application/json' }, body: new URLSearchParams(new FormData(serviceForm)) });
-            await loadPreview();
-            refresh();
-        } catch (failure) {
-            const error = stayDialog.querySelector('[data-stay-error]');
-            error.textContent = failure.message;
-            error.hidden = false;
-        } finally { button.disabled = false; }
-    });
-    for (const dialog of root.querySelectorAll('dialog')) {
-        dialog.addEventListener('close', () => { if (dialog === stayDialog) { ++previewSerial; stayForm.reset(); stayForm.querySelector('[data-guests]').replaceChildren(); } });
-    }
     document.addEventListener('reception:refresh', refresh);
     document.addEventListener('reception:offline', () => { root.querySelector('[data-refresh-error]').hidden = false; });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
@@ -219,14 +112,4 @@
     window.addEventListener('pagehide', () => { clearInterval(refreshTimer); clearInterval(clockTimer); });
     displayTimes();
     selectTab();
-    const shortcut = new URLSearchParams(window.location.search);
-    const requestedAction=shortcut.get('action'), requestedBooking=shortcut.get('booking'), requestedLine=shortcut.get('line');
-    if (['checkin','checkout'].includes(requestedAction) && /^[0-9]+$/.test(requestedBooking || '') && /^[0-9]+$/.test(requestedLine || '')) {
-        activeAction=requestedAction; activeBooking=requestedBooking; activeLine=requestedLine;
-        stayForm.reset();
-        stayDialog.querySelector('[data-stay-title]').textContent=labels[activeAction];
-        stayDialog.querySelector('[data-stay-code]').textContent='#'+activeBooking;
-        stayDialog.showModal();
-        loadPreview();
-    }
 })();

@@ -146,6 +146,7 @@
                 fragment.querySelector('[data-guest-title]').textContent = (adult ? data.adult : data.child) + ' ' + (index + 1);
                 fragment.querySelector('[name=guestType]').value = adult ? 'ADULT' : 'CHILD';
                 fragment.querySelector('[name=documentNumber]').required = adult;
+                fragment.querySelector('[name=dateOfBirth]').required = !adult;
                 guests.append(fragment);
             }
             const notReady = p.roomStatus !== 'AVAILABLE';

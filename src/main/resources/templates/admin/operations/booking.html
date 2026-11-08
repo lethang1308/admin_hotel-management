@@ -10,6 +10,7 @@
   
   <div class="card-body">
 <h4 th:text="${d.booking.s('booking_code')}"></h4>
+<button type="button" class="btn btn-sm btn-primary mb-3" data-stay-all th:data-booking="${d.booking.id('id')}" th:data-stay-lines="${#strings.listJoin(inHouseLines,',')}" th:if="${#lists.size(inHouseLines)>1}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{stay.allRooms}"></button>
 <div class="alert alert-light-success" th:if="${walkInCreated}" th:text="#{deskBook.createdHint}"></div>
 <p><strong th:text="${d.booking.s('contact_name')}"></strong> · <span th:text="${d.booking.s('contact_phone')}"></span> · <span th:text="${d.booking.s('contact_email')}"></span></p>
 <p><span th:text="#{ops.source}"></span> <span class="badge bg-light-primary" th:text="#{${'ops.'+d.booking.s('source')}}"></span> · <span class="badge bg-light-primary" th:text="#{${'ops.'+d.booking.s('status')}}"></span></p>
@@ -55,6 +56,9 @@
   <p class="text-muted"><span th:text="${room.s('check_in_date')+' → '+room.s('check_out_date')}"></span> ·
     <span th:text="#{ops.adults}"></span> <span th:text="${room.n('adults')}"></span> · <span th:text="#{ops.children}"></span> <span th:text="${room.n('children')}"></span></p>
   <div class="d-flex gap-2 flex-wrap mb-3" th:attr="data-booking-line=${room.id('id')}">
+<div class="d-flex flex-wrap gap-2 mb-2">
+<button type="button" class="btn btn-sm btn-primary" data-stay-action="checkin" th:data-booking="${d.booking.id('id')}" th:data-line="${room.id('id')}" th:data-code="${d.booking.s('booking_code')}" th:if="${room.s('status') == 'CONFIRMED' and room.date('check_in_date') == today}" sec:authorize="hasAuthority('booking.checkin')" th:text="#{reception.checkin}"></button>
+<button type="button" class="btn btn-sm btn-primary" data-stay-action="checkout" th:data-booking="${d.booking.id('id')}" th:data-line="${room.id('id')}" th:data-code="${d.booking.s('booking_code')}" th:if="${room.s('status') == 'CHECKED_IN'}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{reception.checkout}"></button></div>
 <button type="button" class="btn btn-sm btn-outline-primary" data-assign-room th:data-line="${room.id('id')}"
  th:if="${room.s('status') == 'PENDING' or room.s('status') == 'CONFIRMED'}" sec:authorize="hasAuthority('booking.update.any')" th:text="#{deskBook.assign}"></button>
 <th:block th:if="${room.s('status') == 'CONFIRMED' or room.s('status') == 'CHECKED_IN'}" sec:authorize="hasAuthority('booking.update.any')">
@@ -77,12 +81,13 @@
 <div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/checkin(id=${d.booking.id('id')})}"  >
 <input type="hidden" name="line" th:value="${room.id('id')}"><div class="border rounded p-2 mb-2" th:each="i:${#numbers.sequence(1,room.n('adults')+room.n('children'))}" th:with="adult=${i<=room.n('adults')}">
 <input type="hidden" name="guestType" th:value="${adult ? 'ADULT' : 'CHILD'}">
+<div class="booking-input-grid"><label class="form-label"><span th:text="#{stay.birth}"></span><input class="form-control" name="dateOfBirth" type="date" th:max="${bookingToday}" th:required="${!adult}"></label><label class="form-label"><span th:text="#{stay.nationality}"></span><input class="form-control" name="nationality" maxlength="2" pattern="[a-zA-Z]{2}"></label></div>
 <div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
   <span th:text="#{ops.guestName}"></span>
   <input class="form-control" type="text" name="guestName"  maxlength="150" required>
 </label></div>
 <div class="col-12 col-md"><label class="form-label d-block"><span th:text="#{ops.documentType}"></span>
-<select name="documentType" class="form-select"><option value="ID" th:text="#{ops.nationalId}"></option><option value="PASSPORT" th:text="#{ops.passport}"></option><option value="OTHER" th:text="#{ops.other}"></option></select></label></div>
+<select name="documentType" class="form-select"><option value="ID" th:text="#{ops.nationalId}"></option><option value="PASSPORT" th:text="#{ops.passport}"></option><option value="BIRTH_CERT" th:unless="${adult}" th:text="#{stay.birthCert}"></option></select></label></div>
 <div class="col-12 col-md"><label class="form-label d-block mb-0">
   <span th:text="#{ops.documentNumber}"></span>
   <input class="form-control" type="text" name="documentNumber"  maxlength="60" autocomplete="off" th:required="${adult}">

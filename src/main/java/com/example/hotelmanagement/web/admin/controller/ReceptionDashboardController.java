@@ -158,25 +158,20 @@ public class ReceptionDashboardController {
             @RequestParam List<String> guestType,
             @RequestParam List<String> documentType,
             @RequestParam List<String> documentNumber,
+            @RequestParam(required = false) List<String> dateOfBirth,
+            @RequestParam(required = false) List<String> nationality,
             RedirectAttributes flash) {
         web.mutate(
                 () -> {
-                    int count = guestName.size();
-                    db.require(
-                            count > 0
-                                    && count <= 100
-                                    && guestType.size() == count
-                                    && documentType.size() == count
-                                    && documentNumber.size() == count,
-                            "guests");
-                    var guests = new ArrayList<StayService.Guest>();
-                    for (int i = 0; i < count; i++)
-                        guests.add(
-                                new StayService.Guest(
-                                        guestName.get(i),
-                                        guestType.get(i),
-                                        documentType.get(i),
-                                        documentNumber.get(i)));
+                    var guests =
+                            StayGuestForms.parse(
+                                    db,
+                                    guestName,
+                                    guestType,
+                                    documentType,
+                                    documentNumber,
+                                    dateOfBirth,
+                                    nationality);
                     actions.checkIn(booking, line, guests, reason, key, method, amount);
                 },
                 flash);

@@ -31,10 +31,31 @@ public class StayService {
     private final FrontDeskPaymentService payments;
     private final IdentityDocumentCrypto documents;
 
-    public record Guest(String name, String type, String documentType, String document) {}
+    public record Guest(
+            String name,
+            String type,
+            String documentType,
+            String document,
+            LocalDate dateOfBirth,
+            String nationality) {
+        public Guest(String name, String type, String documentType, String document) {
+            this(name, type, documentType, document, null, null);
+        }
+    }
 
     @PreAuthorize("hasAuthority('booking.checkin')")
     public void checkIn(long id, long lineId, List<Guest> guests, String reason) {
+        completeCheckIn(id, lineId, guests, reason, null);
+    }
+
+    @PreAuthorize("hasAuthority('booking.checkin')")
+    public void checkInAndCollect(
+            long id, long lineId, List<Guest> guests, String reason, Settlement settlement) {
+        completeCheckIn(id, lineId, guests, reason, settlement);
+    }
+
+    private void completeCheckIn(
+            long id, long lineId, List<Guest> guests, String reason, Settlement settlement) {
         var booking = bookings.lock(id);
         var line = db.bookingRoom(id, lineId);
         if (line.s("status").equals("CHECKED_IN")) return;
@@ -44,14 +65,14 @@ public class StayService {
         db.require(
                 line.s("status").equals("CONFIRMED") && today.equals(line.date("check_in_date")),
                 "arrival");
-        bookings.requireDeposit(booking);
         var assigned = bookings.activeAllocation(lineId);
         long room = assigned.id("room_id");
         allocation.lockRooms(List.of(room));
         db.require(
                 "AVAILABLE".equals(db.one("SELECT status FROM rooms WHERE id=?", room).s("status"))
                         && !inventory.openStay(room)
-                        && !inventory.currentBlock(room),
+                        && !inventory.currentBlock(room)
+                        && !inventory.unverifiedCleaning(room),
                 "notReady");
         db.require(
                 db.count(
@@ -81,22 +102,73 @@ public class StayService {
                         && guests.stream().filter(g -> "ADULT".equals(g.type())).count()
                                 == line.n("adults"),
                 "guests");
+        bookings.capacity(line.id("room_type_id"), line.n("adults"), line.n("children"));
+        allocation.assertClaims(lineId, bookings.window(line));
+        db.require(
+                db.count(
+                                "SELECT COUNT(*) FROM rooms r JOIN floors f ON f.id=r.floor_id JOIN"
+                                    + " room_types t ON t.id=r.room_type_id WHERE r.id=? AND"
+                                    + " f.is_active=TRUE AND t.is_active=TRUE AND r.sell_from<=?"
+                                    + " AND (r.sell_until IS NULL OR r.sell_until>=?)",
+                                room,
+                                today,
+                                line.date("check_out_date"))
+                        == 1,
+                "notReady");
         timingSurcharge(booking, line, now, true);
+        if (settlement != null) {
+            db.require(
+                    settlement.expectedDebt() != null
+                            && ledger.balance(id).debt().compareTo(settlement.expectedDebt()) == 0,
+                    "priceChanged");
+            db.require(settlement.amount() != null && settlement.amount().signum() >= 0, "amount");
+            if (settlement.amount().signum() > 0)
+                payments.collect(
+                        id,
+                        settlement.key(),
+                        "PAYMENT",
+                        settlement.method(),
+                        settlement.amount(),
+                        reason);
+        }
+        bookings.requireDeposit(booking);
+        var seenDocuments = new HashSet<String>();
         for (var guest : guests) {
             boolean adult = "ADULT".equals(guest.type());
             db.require(adult || "CHILD".equals(guest.type()), "guests");
             String document =
                     adult ? db.required(guest.document(), 60) : db.optional(guest.document(), 60);
+            db.require(
+                    guest.dateOfBirth() == null
+                            || (!guest.dateOfBirth().isAfter(today)
+                                    && !guest.dateOfBirth().isBefore(today.minusYears(130))),
+                    "birth");
+            db.require(adult || guest.dateOfBirth() != null, "birth");
+            String nationality = db.optional(guest.nationality(), 2);
+            if (nationality != null) nationality = nationality.toUpperCase(Locale.ROOT);
+            db.require(nationality == null || nationality.matches("[A-Z]{2}"), "guests");
+            db.require(
+                    document == null
+                            || (guest.documentType() != null
+                                    && (adult
+                                                    ? Set.of("ID", "PASSPORT")
+                                                    : Set.of("ID", "PASSPORT", "BIRTH_CERT"))
+                                            .contains(guest.documentType())),
+                    "guests");
+            String hash = documents.hash(document);
+            db.require(hash == null || seenDocuments.add(hash), "guests");
             long guestId =
                     db.insert(
                             "booking_guests",
-                            "booking_id,full_name,guest_type,document_type,document_number_encrypted,document_number_hash",
+                            "booking_id,full_name,guest_type,document_type,document_number_encrypted,document_number_hash,date_of_birth,nationality_code",
                             id,
                             db.required(guest.name(), 150),
                             guest.type(),
                             document == null ? null : db.required(guest.documentType(), 30),
                             document == null ? null : documents.encrypt(document),
-                            documents.hash(document));
+                            hash,
+                            guest.dateOfBirth(),
+                            nationality);
             db.insert(
                     "stay_guests",
                     "booking_id,booking_room_id,booking_guest_id,room_allocation_id,arrived_at",
@@ -334,7 +406,25 @@ public class StayService {
                     taxRate);
     }
 
-    public record Surcharge(Long policyId, String name, BigDecimal amount, BigDecimal taxPercent) {
+    public record Surcharge(
+            Long policyId,
+            String name,
+            BigDecimal amount,
+            BigDecimal taxPercent,
+            long minutes,
+            String amountType,
+            BigDecimal amountValue,
+            BigDecimal nightBase) {
+        @JsonProperty
+        public long billedHours() {
+            return (minutes + 59) / 60;
+        }
+
+        @JsonProperty
+        public BigDecimal tax() {
+            return percent(amount, taxPercent);
+        }
+
         @JsonProperty
         public BigDecimal total() {
             return amount.add(percent(amount, taxPercent));
@@ -368,13 +458,20 @@ public class StayService {
         BigDecimal amount =
                 switch (rule.s("amount_type")) {
                     case "PERCENT_NIGHT" -> percent(base, value);
-                    case "PER_HOUR" -> value.multiply(BigDecimal.valueOf(minutes))
-                            .divide(BigDecimal.valueOf(60), 0, RoundingMode.HALF_UP);
+                    case "PER_HOUR" -> vnd(value.multiply(BigDecimal.valueOf((minutes + 59) / 60)));
                     default -> vnd(value);
                 };
         var taxRate = bookings.policy(booking).taxPercent();
 
-        return new Surcharge(rule.id("id"), rule.s("name"), amount, taxRate);
+        return new Surcharge(
+                rule.id("id"),
+                rule.s("name"),
+                amount,
+                taxRate,
+                minutes,
+                rule.s("amount_type"),
+                value,
+                base);
     }
 
     public record StayPreview(
@@ -451,7 +548,8 @@ public class StayService {
                         .subtract(credit)
                         .add(fee)
                         .add(surcharge == null ? ZERO : surcharge.total());
-        var required = booking.money("deposit_required_amount").min(balance.total().max(ZERO));
+        var depositBase = checkIn ? balance.net().add(projected) : balance.total();
+        var required = booking.money("deposit_required_amount").min(depositBase.max(ZERO));
         boolean finalRoom =
                 bookings.lines(id).stream()
                         .noneMatch(

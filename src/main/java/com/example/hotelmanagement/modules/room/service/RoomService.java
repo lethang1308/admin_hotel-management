@@ -186,6 +186,8 @@ public class RoomService {
             return;
         }
         if (next == RoomStatus.INACTIVE) throw messages.error("hotel.error.useRetire");
+        if (next == RoomStatus.AVAILABLE && guard.unverifiedCleaning(id))
+            throw messages.error("hotel.error.cleaningInspection");
         if (guard.currentBlock(id) || guard.openStay(id))
             throw messages.error("hotel.error.roomBusy");
         boolean valid =

@@ -104,6 +104,7 @@ public class RoomAllocationService {
                     && readyNow
                     && (!"AVAILABLE".equals(room.s("status"))
                             || inventory.openStay(room.id("id"))
+                            || inventory.unverifiedCleaning(room.id("id"))
                             || db.count(
                                             """
                         SELECT COUNT(*) FROM room_allocations a JOIN booking_rooms br ON br.id=a.booking_room_id
@@ -160,7 +161,7 @@ public class RoomAllocationService {
         var assigned =
                 db.rows(
                         "SELECT * FROM room_allocations WHERE booking_room_id=? AND"
-                            + " status='SCHEDULED'",
+                                + " status='SCHEDULED'",
                         line);
         db.require(assigned.size() == 1, "state");
         var a = assigned.get(0);
@@ -256,6 +257,11 @@ public class RoomAllocationService {
                 "DIRTY",
                 db.actor(),
                 reason);
-        db.insert("housekeeping_tasks", "room_id,created_by,notes", room, db.actor(), reason);
+        db.insert(
+                "housekeeping_tasks",
+                "room_id,created_by,notes",
+                room,
+                db.actor(),
+                "Dọn phòng sau khi khách trả / đổi phòng · " + reason);
     }
 }

@@ -155,7 +155,7 @@ public class AdminBookingDeskController {
     @GetMapping("/{id}/rooms/{line}/walk-in-preview")
     @PreAuthorize(
             "hasAuthority('booking.confirm') and hasAuthority('booking.checkin') and"
-                + " hasAuthority('booking.read.any')")
+                    + " hasAuthority('booking.read.any')")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> walkInPreview(
             @PathVariable long id, @PathVariable long line) {
@@ -182,25 +182,20 @@ public class AdminBookingDeskController {
             @RequestParam List<String> guestType,
             @RequestParam List<String> documentType,
             @RequestParam List<String> documentNumber,
+            @RequestParam(required = false) List<String> dateOfBirth,
+            @RequestParam(required = false) List<String> nationality,
             RedirectAttributes flash) {
         web.mutate(
                 () -> {
-                    int size = guestName.size();
-                    db.require(
-                            size > 0
-                                    && size <= 100
-                                    && guestType.size() == size
-                                    && documentType.size() == size
-                                    && documentNumber.size() == size,
-                            "guests");
-                    var guests = new ArrayList<StayService.Guest>();
-                    for (int i = 0; i < size; i++)
-                        guests.add(
-                                new StayService.Guest(
-                                        guestName.get(i),
-                                        guestType.get(i),
-                                        documentType.get(i),
-                                        documentNumber.get(i)));
+                    var guests =
+                            StayGuestForms.parse(
+                                    db,
+                                    guestName,
+                                    guestType,
+                                    documentType,
+                                    documentNumber,
+                                    dateOfBirth,
+                                    nationality);
                     desk.walkIn(id, line, guests, reason, key, method, amount);
                 },
                 flash);

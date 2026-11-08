@@ -82,44 +82,6 @@
 <button class="btn btn-primary mt-3" th:text="#{reception.confirmAction}"></button>
 </form></dialog>
 
-<dialog class="reception-dialog reception-dialog-wide" id="stay-dialog">
-<div class="reception-dialog-heading"><h5 data-stay-title></h5><button type="button" class="btn-close" data-close-dialog th:aria-label="#{reception.close}"></button></div>
-<p class="text-muted small" data-stay-code></p>
-<div class="alert alert-light-danger" role="alert" data-stay-error hidden></div>
-<p data-stay-loading th:text="#{reception.loading}"></p>
-<div data-stay-ready hidden>
-<div class="reception-stay-summary" data-stay-summary></div>
-<details class="my-3"><summary th:text="#{reception.charges}"></summary><div class="table-responsive"><table class="table table-sm"><tbody data-stay-charges></tbody></table></div></details>
-<form method="post" th:action="@{/admin/receptionist/quick-checkin}" id="stay-form">
-<input type="hidden" name="booking"><input type="hidden" name="line"><input type="hidden" name="key"><input type="hidden" name="expectedDebt">
-<div data-guests></div>
-<div class="reception-settlement" sec:authorize="hasAuthority('payment.collect')">
-<label class="form-label"><span th:text="#{reception.collectNow}"></span><input class="form-control" name="amount" type="number" min="0" step="1" max="9999999999999" value="0" required></label>
-<label class="form-label"><span th:text="#{reception.method}"></span><select name="method" class="form-select"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label>
-</div>
-<input sec:authorize="!hasAuthority('payment.collect')" type="hidden" name="amount" value="0">
-<label class="form-label"><span th:text="#{reception.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
-<div class="alert alert-light-warning small mt-3" data-stay-refund hidden><span th:text="#{reception.refundHint}"></span>
-<a th:href="@{/admin/debts(direction='REFUND')}" sec:authorize="hasAuthority('payment.refund')" th:text="#{reception.refunds}"></a></div>
-<button class="btn btn-primary mt-3" data-submit-stay th:text="#{reception.confirmAction}"></button>
-</form>
-<form method="post" th:action="@{/admin/receptionist/services}" id="desk-service-form" class="border-top pt-3 mt-4" sec:authorize="hasAuthority('service.usage.manage')">
-<input type="hidden" name="booking"><input type="hidden" name="line"><input type="hidden" name="key">
-<h6 th:text="#{reception.addService}"></h6>
-<div class="reception-settlement"><label class="form-label"><span th:text="#{reception.service}"></span><select class="form-select" name="service" required></select></label>
-<label class="form-label"><span th:text="#{reception.quantity}"></span><input class="form-control" name="quantity" type="number" value="1" min="0.001" step="0.001" max="9999999.999" required></label></div>
-<button class="btn btn-outline-primary" th:text="#{reception.addService}"></button>
-</form>
-</div></dialog>
-
-<template id="guest-template"><fieldset class="border rounded p-3 mb-3">
-<legend class="float-none w-auto fs-6 px-1" data-guest-title></legend>
-<input type="hidden" name="guestType">
-<div class="reception-guest-fields">
-<label class="form-label"><span th:text="#{reception.guestName}"></span><input class="form-control" name="guestName" maxlength="150" required autocomplete="off"></label>
-<label class="form-label"><span th:text="#{reception.documentType}"></span><select name="documentType" class="form-select"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option></select></label>
-<label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="documentNumber" maxlength="60" autocomplete="off"></label>
-</div></fieldset></template>
 <span hidden id="desk-labels" th:data-checkin="#{reception.checkin}" th:data-checkout="#{reception.checkout}"
  th:data-confirm="#{reception.confirm}" th:data-reject="#{reception.reject}" th:data-no-show="#{reception.noShow}"
  th:data-adult="#{reception.adult}" th:data-child="#{reception.child}"></span>

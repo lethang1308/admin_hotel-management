@@ -124,6 +124,14 @@ public class HotelInventoryCoordinator {
                 > 0;
     }
 
+    public boolean unverifiedCleaning(Long roomId) {
+        return count(
+                        "SELECT COUNT(*) FROM housekeeping_tasks WHERE room_id=? AND status IN"
+                                + " ('PENDING','IN_PROGRESS','COMPLETED')",
+                        roomId)
+                > 0;
+    }
+
     public boolean futureAllocations(Long roomId) {
         return count(
                         "SELECT COUNT(*) FROM room_allocations WHERE room_id=? AND status IN"

@@ -39,6 +39,7 @@ public final class CmsTestData {
                     "room_night_claims",
                     "booking_room_nights",
                     "room_allocations",
+                    "booking_qr_tokens",
                     "booking_guests",
                     "booking_rooms",
                     "bookings",

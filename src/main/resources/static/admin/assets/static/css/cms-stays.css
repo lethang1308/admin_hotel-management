@@ -1,0 +1,9 @@
+.stay-procedure-dialog { width:min(76rem,calc(100vw - 2rem)); }
+.stay-procedure-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.5rem; }
+.stay-summary p { display:flex; justify-content:space-between; gap:1rem; margin-bottom:.7rem; font-variant-numeric:tabular-nums; }
+.stay-summary p:last-child { margin-bottom:0; }
+.stay-surcharges > div { border-left:3px solid var(--bs-warning); padding:.5rem 1rem; margin-bottom:1rem; background:var(--bs-tertiary-bg,var(--bs-body-bg)); }
+.stay-lookup-card { border:1px solid var(--bs-border-color); border-radius:.5rem; padding:1rem; margin-top:1rem; }
+.stay-lookup-line { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; border-top:1px solid var(--bs-border-color); padding-top:.75rem; margin-top:.75rem; }
+.stay-lookup-line > span { flex:1; min-width:12rem; }
+@media(max-width:991px) { .stay-procedure-grid { grid-template-columns:1fr; } }

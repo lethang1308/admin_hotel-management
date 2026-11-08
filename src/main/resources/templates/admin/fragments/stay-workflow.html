@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><body>
+<th:block th:fragment="dialogs" sec:authorize="hasAuthority('booking.read.any')">
+<div id="stay-workflow" th:data-api="@{/admin/receptionist/stays/}" th:data-bookings="@{/admin/bookings/}" th:data-invoices="@{/admin/invoices/}"
+ th:data-service="@{/admin/receptionist/services}" th:data-today="${bookingToday}"
+ th:data-checkin="${#authorization.expression(&quot;hasAuthority('booking.checkin')&quot;)}"
+ th:data-checkout="${#authorization.expression(&quot;hasAuthority('booking.checkout')&quot;)}"
+ th:data-assign="${#authorization.expression(&quot;hasAuthority('booking.update.any')&quot;)}"
+ th:data-qr="${#authorization.expression(&quot;hasAuthority('booking.qr.scan')&quot;)}"
+ th:data-collect="${#authorization.expression(&quot;hasAuthority('payment.collect')&quot;)}"
+ th:data-refund="${#authorization.expression(&quot;hasAuthority('payment.refund')&quot;)}">
+<dialog id="stay-lookup" class="reception-dialog reception-dialog-wide">
+<div class="reception-dialog-heading"><h5 th:text="#{stay.lookup}"></h5><button type="button" class="btn-close" data-stay-close th:aria-label="#{reception.close}"></button></div>
+<form id="stay-lookup-form">
+<div class="booking-input-grid"><label class="form-label"><span th:text="#{deskBook.customerMode}"></span><select class="form-select" name="mode">
+<option value="CONTACT" th:text="#{deskBook.contactSearch}"></option><option value="DOCUMENT" sec:authorize="hasAuthority('customer.read')" th:text="#{deskBook.documentSearch}"></option>
+<option value="QR" sec:authorize="hasAuthority('booking.qr.scan')" th:text="#{stay.qrMode}"></option></select></label>
+<label class="form-label"><span th:text="#{stay.lookup}"></span><input class="form-control" name="q" minlength="3" maxlength="150" autocomplete="off" required></label></div>
+<button class="btn btn-primary" th:text="#{deskBook.search}"></button>
+<label class="btn btn-outline-primary ms-2 mb-0" sec:authorize="hasAuthority('booking.qr.scan')"><span th:text="#{stay.qrImage}"></span><input class="visually-hidden" type="file" accept="image/png,image/jpeg" id="stay-qr-image"></label>
+</form><p class="small text-muted mt-2" th:text="#{stay.lookupHint}"></p><p data-lookup-state role="status"></p><div data-lookup-results></div>
+<div data-issued-qr hidden class="text-center border rounded p-3 mt-3"><img width="220" height="220" alt="QR" data-qr-preview><p class="small text-muted" data-qr-expiry></p><code class="d-block text-break" data-qr-payload></code></div>
+</dialog>
+
+<dialog id="stay-procedure" class="reception-dialog stay-procedure-dialog">
+<div class="reception-dialog-heading"><h5 data-procedure-title></h5><button type="button" class="btn-close" data-stay-close th:aria-label="#{reception.close}"></button></div>
+<p data-procedure-context class="text-muted"></p><p data-procedure-state role="status"></p>
+<div data-procedure-content hidden>
+<div class="stay-procedure-grid"><div>
+<div data-readiness class="alert"></div>
+<div data-surcharge-detail class="stay-surcharges"></div>
+<div data-clean-choice hidden class="border rounded p-3 mb-3">
+<label class="form-label"><span th:text="#{stay.cleanRoom}"></span><select class="form-select" data-clean-room><option value="" th:text="#{deskBook.selectRoom}"></option></select></label>
+<button type="button" class="btn btn-outline-primary btn-sm mt-2" data-priority sec:authorize="hasAuthority('housekeeping.manage') and hasAuthority('booking.checkin')" th:text="#{stay.priority}"></button>
+<a class="btn btn-link btn-sm" th:href="@{/admin/receptionist/stays#cleaning}" sec:authorize="hasAuthority('housekeeping.manage')" th:text="#{stay.cleaning}"></a></div>
+<div data-bill-lines></div>
+<details data-bill-detail class="mb-3"><summary th:text="#{reception.charges}"></summary><p class="small text-muted" th:text="#{stay.sharedLedger}"></p>
+<div class="table-responsive"><table class="table table-sm"><thead><tr><th th:text="#{ops.day}"></th><th th:text="#{ops.description}"></th><th th:text="#{ops.total}"></th></tr></thead><tbody data-bill-charges></tbody></table></div></details>
+<div data-stay-registered class="small mb-3"></div>
+<form id="stay-quick-service" class="border rounded p-3 mb-3" hidden sec:authorize="hasAuthority('service.usage.manage')">
+<h6 th:text="#{reception.addService}"></h6><div class="booking-input-grid">
+<label class="form-label"><span th:text="#{reception.service}"></span><select class="form-select" name="service" required></select></label>
+<label class="form-label"><span th:text="#{reception.quantity}"></span><input class="form-control" name="quantity" type="number" min="0.001" max="9999999.999" step="0.001" value="1" required></label></div>
+<label class="form-label"><span th:text="#{ops.line}"></span><select class="form-select" name="line"></select></label>
+<button class="btn btn-outline-primary btn-sm" th:text="#{reception.addService}"></button></form>
+</div><div>
+<div data-procedure-summary class="stay-summary border rounded p-3 mb-3"></div>
+<form id="stay-procedure-form" autocomplete="off">
+<div data-procedure-guests></div>
+<div data-settle-action class="mb-3"><label class="form-label"><span th:text="#{stay.settlement}"></span><select class="form-select" name="paymentAction">
+<option value="NONE" th:text="#{stay.noPayment}"></option><option value="COLLECT" sec:authorize="hasAuthority('payment.collect')" th:text="#{reception.collectNow}"></option>
+<option value="REFUND" sec:authorize="hasAuthority('payment.refund')" th:text="#{ops.refundDue}"></option></select></label></div>
+<div class="booking-input-grid" data-money-fields>
+<label class="form-label"><span th:text="#{stay.transactionAmount}"></span><input class="form-control" type="number" name="amount" value="0" min="0" step="1" max="9999999999999" required></label>
+<label class="form-label"><span th:text="#{reception.method}"></span><select class="form-select" name="method"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label></div>
+<p class="small text-muted" th:text="#{stay.cashHint}"></p>
+<label class="form-label" data-refund-parent hidden><span th:text="#{stay.refundParent}"></span><select class="form-select" name="parent"></select></label>
+<div data-invoice-options class="border-top pt-3 mt-3" sec:authorize="hasAuthority('invoice.manage')">
+<label class="form-check"><input type="checkbox" class="form-check-input" name="issueInvoice" checked><span class="form-check-label" th:text="#{stay.issueInvoice}"></span></label>
+<p class="small text-muted" data-invoice-hint th:text="#{stay.invoiceFinal}"></p>
+<label class="form-label"><span th:text="#{ops.address}"></span><input class="form-control" name="buyerAddress" maxlength="500"></label>
+<label class="form-label"><span th:text="#{ops.taxCode}"></span><input class="form-control" name="taxCode" maxlength="30"></label></div>
+<label class="form-label mt-3"><span th:text="#{reception.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
+<div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" data-procedure-submit th:text="#{reception.confirmAction}"></button><button type="button" class="btn btn-light" data-reload-procedure th:text="#{stay.refreshBill}"></button></div>
+</form></div></div></div>
+<div data-procedure-receipt hidden class="alert alert-light-success"><p th:text="#{stay.success}"></p><a data-receipt-booking class="btn btn-outline-primary" th:text="#{reception.details}"></a> <a data-receipt-pdf class="btn btn-primary" hidden th:text="#{stay.download}"></a></div>
+</dialog>
+<template id="stay-person-template"><fieldset class="border rounded p-3 mb-3">
+<legend class="float-none w-auto fs-6 px-1" data-person-title></legend><input type="hidden" name="type">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{reception.guestName}"></span><input class="form-control" name="name" maxlength="150" required></label>
+<label class="form-label"><span th:text="#{stay.birth}"></span><input class="form-control" type="date" name="dateOfBirth" th:max="${bookingToday}"></label>
+<label class="form-label"><span th:text="#{stay.nationality}"></span><input class="form-control" name="nationality" maxlength="2" pattern="[a-zA-Z]{2}" placeholder="VN"></label>
+<label class="form-label"><span th:text="#{reception.documentType}"></span><select class="form-select" name="documentType"><option value="ID" th:text="#{reception.nationalId}"></option><option value="PASSPORT" th:text="#{reception.passport}"></option><option value="BIRTH_CERT" th:text="#{stay.birthCert}"></option></select></label>
+<label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="document" maxlength="60"></label></div></fieldset></template>
+<div hidden><span th:each="s:${#strings.arraySplit('PENDING,CONFIRMED,CHECKED_IN,CHECKED_OUT,CANCELLED,REJECTED,NO_SHOW',',')}" th:data-stay-status="${s}" th:text="#{${'ops.'+s}}"></span></div>
+<div id="stay-workflow-labels" hidden>
+<span data-label="checkin" th:text="#{reception.checkin}"></span><span data-label="checkout" th:text="#{reception.checkout}"></span>
+<span data-label="adult" th:text="#{reception.adult}"></span><span data-label="child" th:text="#{reception.child}"></span>
+<span data-label="empty" th:text="#{cms.empty}"></span><span data-label="error" th:text="#{deskBook.loadError}"></span>
+<span data-label="total" th:text="#{ops.total}"></span><span data-label="paid" th:text="#{ops.paid}"></span><span data-label="debt" th:text="#{reception.balance}"></span>
+<span data-label="refund" th:text="#{ops.refundDue}"></span><span data-label="deposit" th:text="#{reception.depositShort}"></span>
+<span data-label="credit" th:text="#{reception.credit}"></span><span data-label="fee" th:text="#{reception.changeFee}"></span>
+<span data-label="surcharge" th:text="#{reception.surcharge}"></span><span data-label="tax" th:text="#{ops.tax}"></span>
+<span data-label="ready" th:text="#{stay.ready}"></span><span data-label="notReady" th:text="#{reception.notReady}"></span>
+<span data-label="minutes" th:text="#{stay.minutes}"></span><span data-label="hours" th:text="#{stay.hours}"></span>
+<span data-label="details" th:text="#{reception.details}"></span><span data-label="allRooms" th:text="#{stay.allRooms}"></span>
+<span data-label="qr" th:text="#{stay.issueQr}"></span><span data-label="qrExpiry" th:text="#{stay.qrExpiry}"></span>
+<span data-label="prioritySent" th:text="#{stay.prioritySent}"></span><span data-label="refundApproval" th:text="#{stay.refundApproval}"></span>
+<span data-label="refreshRequired" th:text="#{stay.refreshRequired}"></span>
+</div>
+</div></th:block></body></html>

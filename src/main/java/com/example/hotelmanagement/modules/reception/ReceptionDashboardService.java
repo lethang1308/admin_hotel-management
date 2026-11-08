@@ -130,6 +130,7 @@ public class ReceptionDashboardService {
                     AND (r.sell_until IS NULL OR r.sell_until>?)
                     AND NOT EXISTS(SELECT 1 FROM room_allocations a WHERE a.room_id=r.id AND a.status='OCCUPIED' AND a.occupied_until_at IS NULL)
                     AND NOT EXISTS(SELECT 1 FROM room_night_claims c WHERE c.room_id=r.id AND c.stay_date=? AND c.room_block_id IS NOT NULL)
+                    AND NOT EXISTS(SELECT 1 FROM housekeeping_tasks h WHERE h.room_id=r.id AND h.status IN ('PENDING','IN_PROGRESS','COMPLETED'))
                     """,
                                         today,
                                         today,

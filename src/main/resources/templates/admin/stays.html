@@ -1,0 +1,18 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+ th:replace="~{admin/layouts/main :: layout(#{stay.title},~{::#stays-page},~{::#stays-scripts})}"><body><section id="stays-page">
+<div class="reception-heading"><div><h3 th:text="#{stay.title}"></h3><p class="text-muted" th:text="#{stay.subtitle}"></p></div>
+<div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-primary" data-stay-lookup th:text="#{stay.lookup}"></button>
+<a class="btn btn-outline-primary" th:href="@{/admin/receptionist}" th:text="#{reception.title}"></a>
+<a class="btn btn-outline-primary" th:href="@{/admin/bookings}" th:text="#{ops.bookings}"></a></div></div>
+<div class="card"><div class="card-body"><p th:text="#{stay.instructions}"></p><p class="small text-muted mb-0" th:text="#{stay.sharedLedger}"></p></div></div>
+<div class="card" id="cleaning" th:if="${cleaning != null}" sec:authorize="hasAuthority('housekeeping.manage')">
+<div class="card-header"><h5 th:text="#{stay.cleaning}"></h5><p class="small text-muted" th:text="#{stay.cleaningHint}"></p></div>
+<div class="card-body pt-0"><div class="table-responsive"><table class="table align-middle"><thead><tr>
+<th th:text="#{ops.physicalRoom}"></th><th th:text="#{ops.status}"></th><th th:text="#{ops.notes}"></th><th th:text="#{ops.actions}"></th></tr></thead><tbody>
+<tr th:if="${#lists.isEmpty(cleaning)}"><td colspan="4" th:text="#{cms.empty}"></td></tr>
+<tr th:each="t:${cleaning}"><td th:text="${t.s('room_number')}"></td><td th:text="#{${'stay.task.'+t.s('status')}}"></td><td th:text="${t.s('notes')}"></td>
+<td><form method="post" th:action="@{/admin/receptionist/stays/clean}" sec:authorize="hasAuthority('room.status.update')">
+<input type="hidden" name="task" th:value="${t.id('id')}"><input type="hidden" name="action" th:value="${t.s('status') == 'PENDING' ? 'start' : t.s('status') == 'IN_PROGRESS' ? 'complete' : 'verify'}">
+<label class="form-label"><span class="visually-hidden" th:text="#{ops.reason}"></span><input class="form-control form-control-sm" name="reason" maxlength="500" required th:placeholder="#{ops.reason}"></label>
+<button class="btn btn-sm btn-outline-primary" th:text="#{${'stay.taskAction.'+t.s('status')}}"></button></form></td></tr></tbody></table></div></div></div>
+</section><th:block id="stays-scripts"></th:block></body></html>
