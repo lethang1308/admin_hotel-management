@@ -67,6 +67,7 @@ class AuthAndRbacIntegrationTest {
                 RegisterRequest.builder()
                         .fullName("John Customer")
                         .email("john@example.com")
+                        .phone("0912345678")
                         .password("Welcome123")
                         .build();
 

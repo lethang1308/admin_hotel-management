@@ -6,7 +6,7 @@
 <tr th:if="${#lists.isEmpty(rows)}"><td colspan="5" class="text-muted text-center py-5" th:text="#{reception.emptyQueue}"></td></tr>
 <tr th:each="r:${rows}">
 <td><a class="fw-semibold" th:href="@{/admin/bookings/{id}(id=${r.bookingId})}" th:text="${r.code}"></a>
-<strong class="d-block mt-1" th:text="${r.name}"></strong>
+<strong class="d-block mt-1" th:text="${r.name}"></strong><span class="badge bg-light-warning" th:if="${r.specialRequests!=null and !#strings.isEmpty(r.specialRequests)}" th:title="${r.specialRequests}" th:text="#{care.requestAlert}"></span>
 <a class="small text-muted" th:href="'tel:'+ ${r.phone}" th:text="${r.phone}"></a></td>
 <td><span th:text="${r.room ?: '—'}"></span><small class="d-block text-muted" th:text="${r.type}"></small>
 <span class="badge mt-1" th:if="${r.roomStatus != null}"

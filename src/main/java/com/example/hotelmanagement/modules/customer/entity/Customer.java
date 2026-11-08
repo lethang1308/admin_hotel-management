@@ -46,6 +46,9 @@ public class Customer extends BaseAuditableEntity {
     @Column(length = 500)
     private String address;
 
+    @Column(length = 20)
+    private String gender;
+
     @Column(columnDefinition = "text")
     private String notes;
 

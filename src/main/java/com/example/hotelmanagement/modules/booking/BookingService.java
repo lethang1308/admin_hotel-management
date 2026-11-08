@@ -395,8 +395,15 @@ public class BookingService {
                     credit.add(
                             db.sum(
                                     "SELECT COALESCE(SUM(amount),0) FROM booking_charges WHERE"
-                                        + " booking_room_night_id=? AND status='POSTED'",
+                                            + " booking_room_night_id=? AND status='POSTED'",
                                     n.id("id")));
+        credit =
+                credit.add(
+                        db.sum(
+                                "SELECT COALESCE(SUM(amount),0) FROM booking_charges WHERE"
+                                    + " booking_id=? AND booking_room_id=? AND source_key LIKE"
+                                    + " 'GUEST-ADDON:%' AND status='POSTED'",
+                                id, lineId));
         var debt = ledger.balance(id).debt().subtract(credit).add(fee);
         return new NoShowReview(amount, fee, debt, debt.negate().max(ZERO));
     }
@@ -487,6 +494,13 @@ public class BookingService {
             var line = selected.get(i);
             var assigned = allocations.get(i);
             long lineKey = line.id("id");
+            // Unconsumed extra beds/guest add-ons end with a room cancelled before check-in.
+            db.update(
+                    "UPDATE booking_charges SET"
+                        + " status='VOIDED',voided_by=?,voided_at=CURRENT_TIMESTAMP(6),void_reason=?"
+                        + " WHERE booking_id=? AND booking_room_id=? AND source_key LIKE"
+                        + " 'GUEST-ADDON:%' AND status='POSTED'",
+                    db.actor(), reason.substring(0, Math.min(reason.length(), 500)), id, lineKey);
             allocation.releaseClaims(assigned.id("id"), line.date("check_in_date"));
             db.update(
                     "UPDATE room_allocations SET status='RELEASED',ended_by=?,reason=? WHERE id=?",

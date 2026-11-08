@@ -33,6 +33,9 @@ public class CustomerService {
         String pattern =
                 "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         String hash = identity.hash(search);
+        String phoneTerm = term.replaceAll("[\\s().-]", "");
+        String phonePattern =
+                "%" + phoneTerm.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         return PageResponse.from(
                 repository.findAll(
                         (r, q, cb) -> {
@@ -46,7 +49,54 @@ public class CustomerService {
                                                         '\\'),
                                                 cb.like(cb.lower(r.get("fullName")), pattern, '\\'),
                                                 cb.like(cb.lower(r.get("email")), pattern, '\\'),
-                                                cb.like(cb.lower(r.get("phone")), pattern, '\\'));
+                                                cb.like(cb.lower(r.get("phone")), pattern, '\\'),
+                                                phoneTerm.matches("[+0-9]+")
+                                                        ? cb.like(
+                                                                cb.function(
+                                                                        "replace",
+                                                                        String.class,
+                                                                        cb.function(
+                                                                                "replace",
+                                                                                String.class,
+                                                                                cb.function(
+                                                                                        "replace",
+                                                                                        String
+                                                                                                .class,
+                                                                                        cb.function(
+                                                                                                "replace",
+                                                                                                String
+                                                                                                        .class,
+                                                                                                cb
+                                                                                                        .function(
+                                                                                                                "replace",
+                                                                                                                String
+                                                                                                                        .class,
+                                                                                                                r
+                                                                                                                        .get(
+                                                                                                                                "phone"),
+                                                                                                                cb
+                                                                                                                        .literal(
+                                                                                                                                " "),
+                                                                                                                cb
+                                                                                                                        .literal(
+                                                                                                                                "")),
+                                                                                                cb
+                                                                                                        .literal(
+                                                                                                                "-"),
+                                                                                                cb
+                                                                                                        .literal(
+                                                                                                                "")),
+                                                                                        cb.literal(
+                                                                                                "."),
+                                                                                        cb.literal(
+                                                                                                "")),
+                                                                                cb.literal("("),
+                                                                                cb.literal("")),
+                                                                        cb.literal(")"),
+                                                                        cb.literal("")),
+                                                                phonePattern,
+                                                                '\\')
+                                                        : cb.disjunction());
                                 p.add(
                                         hash == null
                                                 ? text

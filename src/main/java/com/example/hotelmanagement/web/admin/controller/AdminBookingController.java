@@ -40,6 +40,8 @@ public class AdminBookingController {
     private final FrontDeskPaymentService payments;
     private final InvoiceService invoices;
     private final BookingAvailabilityService availability;
+    private final GuestRequestService guestRequests;
+    private final com.example.hotelmanagement.modules.reception.GuestMessageService guestMessages;
 
     @GetMapping
     @PreAuthorize("hasAuthority('booking.read.any')")
@@ -98,6 +100,12 @@ public class AdminBookingController {
     public String detail(@PathVariable long id, Model model, Authentication authentication) {
         var detail = queries.detail(id);
         model.addAttribute("d", detail);
+        model.addAttribute("guestPreferences", guestRequests.preferences(id));
+        model.addAttribute("guestTags", GuestRequestService.TAGS);
+        model.addAttribute("emailKey", OperationsStore.code(""));
+        if (authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("notification.manage")))
+            model.addAttribute("guestMessages", guestMessages.history(id));
         model.addAttribute(
                 "inHouseLines",
                 detail.rooms().stream()

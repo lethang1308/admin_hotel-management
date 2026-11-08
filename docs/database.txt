@@ -133,6 +133,7 @@ Table customers {
     created_at
   }
   Note: 'Hồ sơ khách dùng chung cho nhiều booking; có thể vừa là nhân viên vừa là khách. Không ép email/số điện thoại khách walk-in là duy nhất.'
+  gender varchar(20)
 }
 
 Table audit_logs {
@@ -315,6 +316,7 @@ Table maintenance_requests {
     `priority IN ('LOW','NORMAL','HIGH','URGENT')` [name: 'ck_maintenance_priority']
     `resolved_at IS NULL OR started_at IS NULL OR resolved_at >= started_at` [name: 'ck_maintenance_times']
   }
+  request_key varchar(24) [unique]
 }
 
 Table room_blocks {
@@ -359,6 +361,8 @@ Table housekeeping_tasks {
     `completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at` [name: 'ck_housekeeping_times']
   }
   Note: 'Check-out tạo PENDING/DIRTY; bắt đầu dọn -> CLEANING; lễ tân xác nhận VERIFIED -> AVAILABLE nếu không có block.'
+  task_kind varchar(20) [not null, default: 'TURNOVER']
+  priority varchar(20) [not null, default: 'NORMAL']
 }
 
 // ── 03. CHÍNH SÁCH, GIÁ ĐỘNG, VOUCHER ──────────────────────────────────────
@@ -1228,3 +1232,26 @@ Table refund_requests {
 }
 Ref: refund_requests.(parent_payment_id, booking_id) > payment_transactions.(id, booking_id)
 Ref: refund_requests.(payment_transaction_id, booking_id) > payment_transactions.(id, booking_id)
+
+
+Table booking_room_preferences {
+  booking_room_id bigint [pk]
+  booking_id bigint [not null]
+  tags varchar(500)
+  extra_beds int [not null, default: 0]
+  extra_guests int [not null, default: 0]
+  revision int [not null, default: 0]
+}
+Ref: booking_room_preferences.(booking_room_id, booking_id) > booking_rooms.(id, booking_id)
+Table guest_messages {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  request_key varchar(150) [not null, unique]
+  message_type varchar(40) [not null]
+  recipient varchar(200) [not null]
+  subject varchar(200) [not null]
+  body text [not null]
+  qr_payload varchar(100)
+  created_by bigint [ref: > users.id]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+}

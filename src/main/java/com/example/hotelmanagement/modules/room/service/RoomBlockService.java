@@ -30,6 +30,39 @@ public class RoomBlockService {
     private final AuditLogService audit;
     private final JdbcTemplate jdbc;
 
+    // Receptionists may manage only blocks tied to their maintenance workflow.
+    @Transactional
+    @PreAuthorize("hasAuthority('maintenance.manage') and hasAuthority('room.status.update')")
+    public Long createMaintenance(long request, RoomBlockForm f) {
+        guard.lock();
+        if (guard.count(
+                        "SELECT COUNT(*) FROM maintenance_requests WHERE id=? AND room_id=? AND"
+                            + " status IN ('OPEN','IN_PROGRESS')",
+                        request,
+                        f.getRoomId())
+                != 1) throw messages.error("hotel.error.notFound");
+        Room room =
+                rooms.lockById(f.getRoomId())
+                        .orElseThrow(() -> messages.error("hotel.error.notFound"));
+        f.setBlockType(RoomBlockType.MAINTENANCE);
+        Long id = createLocked(room, f);
+        jdbc.update("UPDATE room_blocks SET maintenance_request_id=? WHERE id=?", request, id);
+        return id;
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('maintenance.manage') and hasAuthority('room.status.update')")
+    public void releaseMaintenance(long request, long block, String reason) {
+        guard.lock();
+        if (guard.count(
+                        "SELECT COUNT(*) FROM room_blocks WHERE id=? AND maintenance_request_id=?"
+                            + " AND status='ACTIVE'",
+                        block,
+                        request)
+                != 1) throw messages.error("hotel.error.notFound");
+        releaseInternal(block, reason, true);
+    }
+
     @Transactional
     public Long create(RoomBlockForm f) {
         guard.lock();
@@ -106,10 +139,16 @@ public class RoomBlockService {
 
     @Transactional
     public void release(Long id, String reason) {
+        releaseInternal(id, reason, false);
+    }
+
+    private void releaseInternal(Long id, String reason, boolean maintenanceFlow) {
         guard.lock();
         RoomBlock block =
                 blocks.lockById(id).orElseThrow(() -> messages.error("hotel.error.notFound"));
         Room room = rooms.lockById(block.getRoom().getId()).orElseThrow();
+        if (!maintenanceFlow && block.getMaintenanceRequestId() != null)
+            throw messages.error("ops.error.maintenanceWorkflow");
         if (block.getStatus() != RoomBlockStatus.ACTIVE)
             throw messages.error("hotel.error.blockReleased");
         if (reason == null || reason.isBlank() || reason.length() > 500)

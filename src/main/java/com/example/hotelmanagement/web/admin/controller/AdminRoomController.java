@@ -31,6 +31,7 @@ public class AdminRoomController {
     private final RoomTypeService types;
     private final HotelInventoryCoordinator guard;
     private final CmsMessages messages;
+    private final com.example.hotelmanagement.modules.reception.RoomCareQuery care;
 
     @GetMapping
     public String list(
@@ -56,6 +57,18 @@ public class AdminRoomController {
             @RequestParam(required = false) RoomStatus status,
             Model m) {
         m.addAttribute("grid", query.grid(floorId, area, typeId, status));
+        m.addAttribute(
+                "careFaultKey",
+                com.example.hotelmanagement.modules.booking.OperationsStore.code(""));
+        var auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext()
+                        .getAuthentication();
+        m.addAttribute(
+                "occupants",
+                auth.getAuthorities().stream()
+                                .anyMatch(a -> a.getAuthority().equals("booking.read.any"))
+                        ? care.occupied()
+                        : java.util.Map.of());
         filters(floorId, area, typeId, status, m);
         return "admin/rooms/grid";
     }

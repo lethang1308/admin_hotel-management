@@ -124,12 +124,24 @@ public class HotelInventoryCoordinator {
                 > 0;
     }
 
-    public boolean unverifiedCleaning(Long roomId) {
+    public boolean unresolvedMaintenance(Long roomId) {
         return count(
-                        "SELECT COUNT(*) FROM housekeeping_tasks WHERE room_id=? AND status IN"
-                                + " ('PENDING','IN_PROGRESS','COMPLETED')",
-                        roomId)
+                        "SELECT COUNT(*) FROM maintenance_requests m JOIN room_blocks b ON"
+                            + " b.maintenance_request_id=m.id AND b.room_id=m.room_id WHERE"
+                            + " m.room_id=? AND m.status IN ('OPEN','IN_PROGRESS') AND b.status IN"
+                            + " ('ACTIVE','RELEASED') AND b.from_date<=?",
+                        roomId,
+                        today())
                 > 0;
+    }
+
+    public boolean unverifiedCleaning(Long roomId) {
+        return unresolvedMaintenance(roomId)
+                || count(
+                                "SELECT COUNT(*) FROM housekeeping_tasks WHERE room_id=? AND status"
+                                    + " IN ('PENDING','IN_PROGRESS','COMPLETED')",
+                                roomId)
+                        > 0;
     }
 
     public boolean futureAllocations(Long roomId) {

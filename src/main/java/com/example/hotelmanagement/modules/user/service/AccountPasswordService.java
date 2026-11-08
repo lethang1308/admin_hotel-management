@@ -30,7 +30,7 @@ public class AccountPasswordService {
 
     @Transactional
     public void changeOwn(Long id, String current, String next) {
-        User u = required(id);
+        User u = users.lockById(id).orElseThrow(() -> new ResourceNotFoundException("User", id));
         if (current == null || !encoder.matches(current, u.getPasswordHash()))
             throw messages.error("cms.error.currentPassword");
         change(u, next, "PASSWORD_CHANGE", "Self-service password change");

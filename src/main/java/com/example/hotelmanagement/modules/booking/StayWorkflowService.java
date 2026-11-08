@@ -22,6 +22,7 @@ import java.util.*;
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class StayWorkflowService {
     private final OperationsStore db;
+    private final com.example.hotelmanagement.modules.room.service.HousekeepingService housekeeping;
     private final StayService stays;
     private final BookingService bookings;
     private final BookingDeskOperations desk;
@@ -61,7 +62,8 @@ public class StayWorkflowService {
             List<RoomAllocationService.Candidate> alternatives,
             List<Registered> guests,
             Contact contact,
-            String key) {}
+            String key,
+            List<String> specialRequests) {}
 
     public record Receipt(long booking, Long invoice) {}
 
@@ -209,7 +211,25 @@ public class StayWorkflowService {
                         .toList(),
                 new Contact(
                         order.s("booking_code"), order.s("contact_name"), order.s("contact_phone")),
-                code(""));
+                code(""),
+                java.util.stream.Stream.concat(
+                                java.util.stream.Stream.of(order.s("special_requests")),
+                                db
+                                        .rows(
+                                                "SELECT br.special_requests,p.tags FROM"
+                                                    + " booking_rooms br LEFT JOIN"
+                                                    + " booking_room_preferences p ON"
+                                                    + " p.booking_room_id=br.id WHERE"
+                                                    + " br.booking_id=?",
+                                                booking)
+                                        .stream()
+                                        .flatMap(
+                                                x ->
+                                                        java.util.stream.Stream.of(
+                                                                x.s("special_requests"),
+                                                                x.s("tags"))))
+                        .filter(x -> x != null && !x.isBlank())
+                        .toList());
     }
 
     @PreAuthorize("hasAuthority('booking.checkin')")
@@ -382,6 +402,7 @@ public class StayWorkflowService {
             task = active.get(0).id("id");
             db.update("UPDATE housekeeping_tasks SET notes=? WHERE id=?", note, task);
         }
+        db.update("UPDATE housekeeping_tasks SET priority='HIGH' WHERE id=?", task);
         db.audit(
                 "HOUSEKEEPING_PRIORITY",
                 "ROOM",
@@ -394,74 +415,6 @@ public class StayWorkflowService {
 
     @PreAuthorize("hasAuthority('housekeeping.manage') and hasAuthority('room.status.update')")
     public void clean(long task, String action, String reason) {
-        inventory.lock();
-        var initial = db.one("SELECT room_id FROM housekeeping_tasks WHERE id=?", task);
-        long room = initial.id("room_id");
-        allocation.lockRooms(List.of(room));
-        var t = db.one("SELECT * FROM housekeeping_tasks WHERE id=? FOR UPDATE", task);
-        var r = db.one("SELECT * FROM rooms WHERE id=?", room);
-        db.require(
-                !inventory.openStay(room)
-                        && !inventory.currentBlock(room)
-                        && Set.of("DIRTY", "CLEANING", "AVAILABLE").contains(r.s("status")),
-                "notReady");
-        reason = db.required(reason, 500);
-        String next;
-        switch (action) {
-            case "start" -> {
-                db.require("PENDING".equals(t.s("status")), "state");
-                next = "IN_PROGRESS";
-                db.update(
-                        "UPDATE housekeeping_tasks SET started_at=CURRENT_TIMESTAMP(6) WHERE id=?",
-                        task);
-            }
-            case "complete" -> {
-                db.require("IN_PROGRESS".equals(t.s("status")), "state");
-                next = "COMPLETED";
-                db.update(
-                        "UPDATE housekeeping_tasks SET completed_at=CURRENT_TIMESTAMP(6) WHERE"
-                                + " id=?",
-                        task);
-            }
-            case "verify" -> {
-                db.require("COMPLETED".equals(t.s("status")), "state");
-                next = "VERIFIED";
-                db.update(
-                        "UPDATE housekeeping_tasks SET"
-                                + " verified_by=?,verified_at=CURRENT_TIMESTAMP(6) WHERE id=?",
-                        db.actor(),
-                        task);
-            }
-            default -> {
-                db.require(false, "input");
-                throw new IllegalArgumentException();
-            }
-        }
-        db.update("UPDATE housekeeping_tasks SET status=? WHERE id=?", next, task);
-        String roomStatus =
-                next.equals("VERIFIED") && !inventory.unverifiedCleaning(room)
-                        ? "AVAILABLE"
-                        : "CLEANING";
-        db.update(
-                "UPDATE rooms SET status=?,version=version+1,updated_at=CURRENT_TIMESTAMP(6) WHERE"
-                        + " id=?",
-                roomStatus,
-                room);
-        if (!r.s("status").equals(roomStatus))
-            db.insert(
-                    "room_status_history",
-                    "room_id,old_status,new_status,changed_by,reason",
-                    room,
-                    r.s("status"),
-                    roomStatus,
-                    db.actor(),
-                    reason);
-        db.audit(
-                "HOUSEKEEPING_" + next,
-                "ROOM",
-                room,
-                Map.of("taskStatus", t.s("status")),
-                Map.of("task", task),
-                reason);
+        housekeeping.clean(task, action, reason);
     }
 }

@@ -22,6 +22,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminCustomerController {
     private final CustomerService customers;
     private final CmsMessages messages;
+    private final com.example.hotelmanagement.modules.customer.service.CustomerStayHistory history;
+    private final OperationsWeb web;
 
     @GetMapping
     @PreAuthorize("hasAuthority('customer.read')")
@@ -41,7 +43,20 @@ public class AdminCustomerController {
     @PreAuthorize("hasAuthority('customer.read')")
     public String detail(@PathVariable Long id, Model m) {
         m.addAttribute("target", customers.get(id));
+        m.addAttribute("history", history.get(id));
         return "admin/customers/detail";
+    }
+
+    @PostMapping("/{id}/notes")
+    @PreAuthorize("hasAuthority('customer.update')")
+    public String notes(
+            @PathVariable long id,
+            @RequestParam(required = false) String expected,
+            @RequestParam(required = false) String notes,
+            @RequestParam String reason,
+            RedirectAttributes flash) {
+        web.mutate(() -> history.notes(id, expected, notes, reason), flash);
+        return "redirect:/admin/customers/" + id;
     }
 
     @GetMapping("/create")

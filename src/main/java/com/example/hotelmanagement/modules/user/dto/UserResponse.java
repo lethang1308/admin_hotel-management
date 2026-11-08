@@ -1,11 +1,14 @@
 package com.example.hotelmanagement.modules.user.dto;
 
 import com.example.hotelmanagement.modules.user.entity.UserStatus;
+
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.Instant;
-import java.util.Set;
+
 import lombok.Builder;
 import lombok.Getter;
+
+import java.time.Instant;
+import java.util.Set;
 
 @Getter
 @Builder
@@ -20,6 +23,9 @@ public class UserResponse {
 
     @Schema(description = "Unique email address", example = "user@example.com")
     private final String email;
+
+    private final String phone;
+    private final String avatarUrl;
 
     @Schema(description = "Current account status", example = "ACTIVE")
     private final UserStatus status;

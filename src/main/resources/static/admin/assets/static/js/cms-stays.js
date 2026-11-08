@@ -73,6 +73,10 @@
             metric(labels.debt,money(data.projectedDebt)),metric(labels.refund,money(data.refundDue)));
         if(current.action==='checkin')node.append(metric(labels.deposit,money(data.lines[0].preview.depositShortfall)));
         const lines=root.querySelector('[data-bill-lines]');lines.replaceChildren();
+        for(const note of data.specialRequests || []) {
+            const translated=note.split(',').map(x=>document.querySelector('[data-care-tag="'+x+'"]')?.textContent || x).join(', ');
+            lines.append(elem('p','⭐ '+translated,'alert alert-light-warning'));
+        }
         const surcharges=root.querySelector('[data-surcharge-detail]');surcharges.replaceChildren();
         for(const room of data.lines) {
             const p=room.preview;

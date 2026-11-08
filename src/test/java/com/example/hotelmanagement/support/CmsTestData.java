@@ -13,6 +13,8 @@ public final class CmsTestData {
                     + " code='CMS_FLEXIBLE' AND version=1), default_tax_percent=0");
         jdbc.update("DELETE FROM notification_deliveries");
         jdbc.update("DELETE FROM notifications");
+        jdbc.update("DELETE FROM guest_messages");
+        jdbc.update("DELETE FROM booking_room_preferences");
         jdbc.update("DELETE FROM payment_webhook_events");
         jdbc.update("DELETE FROM refund_requests");
         jdbc.update(
@@ -49,6 +51,7 @@ public final class CmsTestData {
                     "bookings",
                     "room_blocks",
                     "room_status_history",
+                    "maintenance_requests",
                     "rooms",
                     "floors",
                     "room_type_images",

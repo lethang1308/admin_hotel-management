@@ -9,7 +9,7 @@
 </div><div class="card mb-4" >
   
   <div class="card-body">
-<h4 th:text="${d.booking.s('booking_code')}"></h4>
+<h4 th:text="${d.booking.s('booking_code')}"></h4><a class="btn btn-sm btn-light mb-3" sec:authorize="hasAuthority('customer.read')" th:href="@{/admin/customers/{id}(id=${d.booking.id('customer_id')})}" th:text="#{care.stayHistory}"></a>
 <button type="button" class="btn btn-sm btn-primary mb-3" data-open-cashier th:data-booking="${d.booking.id('id')}" th:text="#{cashier.title}"></button>
 <button type="button" class="btn btn-sm btn-primary mb-3" data-stay-all th:data-booking="${d.booking.id('id')}" th:data-stay-lines="${#strings.listJoin(inHouseLines,',')}" th:if="${#lists.size(inHouseLines)>1}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{stay.allRooms}"></button>
 <div class="alert alert-light-success" th:if="${walkInCreated}" th:text="#{deskBook.createdHint}"></div>
@@ -46,7 +46,7 @@
 </form></div>
 </details>
   </div>
-</div><div class="card mb-4" >
+</div><div th:replace="~{admin/fragments/guest-care :: requests}"></div><div th:replace="~{admin/fragments/guest-care :: messages}"></div><div class="card mb-4" >
   <div class="card-header pb-2"><h5 th:text="#{ops.roomLines}"></h5></div>
   <div class="card-body">
 <article class="border rounded p-3 mb-3" th:each="room:${d.rooms}">

@@ -246,6 +246,10 @@ public class RoomAllocationService {
 
     public void turnOver(long room, String reason) {
         db.update(
+                "UPDATE housekeeping_tasks SET status='CANCELLED' WHERE room_id=? AND"
+                    + " task_kind='STAY_OVER' AND status IN ('PENDING','IN_PROGRESS','COMPLETED')",
+                room);
+        db.update(
                 "UPDATE rooms SET status='DIRTY',version=version+1,updated_at=CURRENT_TIMESTAMP(6)"
                         + " WHERE id=?",
                 room);

@@ -65,6 +65,8 @@
 <script th:src="@{/admin/assets/static/js/cms-cashier.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-notifications.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-identity.js}"></script>
+<div hidden><span th:each="t:${ {'QUIET_ROOM','HIGH_FLOOR','LOW_FLOOR','NON_SMOKING','CONNECTING_ROOM','LATE_ARRIVAL','EARLY_CHECKIN','LATE_CHECKOUT','BABY_COT','SOFT_PILLOWS','IRON'}}" th:data-care-tag="${t}" th:text="#{${'care.tag.'+t}}"></span></div>
+<script th:src="@{/admin/assets/static/js/cms-guest-care.js}"></script>
 <th:block th:if="${pageScripts != null}" th:replace="${pageScripts}"/>
 </body>
 </html>

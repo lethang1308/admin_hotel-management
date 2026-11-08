@@ -225,6 +225,9 @@ public class OperationsStore {
                 bookingId,
                 json(Map.of("bookingId", bookingId)),
                 ts(Instant.now()));
+        events.publishEvent(
+                new com.example.hotelmanagement.modules.reception.GuestMessageService.BookingEvent(
+                        bookingId, key, type));
         events.publishEvent(new ReceptionOutboxDispatcher.Wake());
     }
 }

@@ -49,7 +49,8 @@ public class ReceptionDashboardService {
             BigDecimal total,
             BigDecimal paid,
             BigDecimal debt,
-            BigDecimal depositDue) {}
+            BigDecimal depositDue,
+            String specialRequests) {}
 
     public record Shift(
             Long id,
@@ -162,6 +163,8 @@ public class ReceptionDashboardService {
 
     private static final String BALANCES =
             """
+            ,CASE WHEN EXISTS(SELECT 1 FROM booking_room_preferences gp WHERE gp.booking_id=b.id AND (COALESCE(gp.tags,'')<>'' OR gp.extra_beds>0 OR gp.extra_guests>0))
+              OR EXISTS(SELECT 1 FROM booking_rooms gr WHERE gr.booking_id=b.id AND COALESCE(gr.special_requests,'')<>'') THEN 1 ELSE 0 END AS has_requests
             ,COALESCE((SELECT SUM(c.amount) FROM booking_charges c WHERE c.booking_id=b.id AND c.status='POSTED'),0) AS total
             ,COALESCE((SELECT SUM(CASE WHEN p.kind='REFUND' THEN -p.amount ELSE p.amount END)
                 FROM payment_transactions p WHERE p.booking_id=b.id AND p.status='SUCCEEDED'),0) AS paid
@@ -174,7 +177,7 @@ public class ReceptionDashboardService {
                 SELECT b.id AS booking_id,br.id AS line_id,b.booking_code,b.contact_name,b.contact_phone,b.source,br.status,
                     br.room_type_name_snapshot AS type_name,r.room_number,r.status AS room_status,br.adults,br.children,
                     CASE WHEN br.status='CHECKED_IN' THEN br.expected_check_out_at ELSE br.expected_check_in_at END AS expected,
-                    b.hold_expires_at,b.deposit_required_amount,1 AS room_count
+                    b.hold_expires_at,b.deposit_required_amount,COALESCE(br.special_requests,b.special_requests) AS special_requests,1 AS room_count
                 """
                                 + BALANCES
                                 + """
@@ -199,7 +202,7 @@ public class ReceptionDashboardService {
                     NULL AS type_name,NULL AS room_number,NULL AS room_status,0 AS adults,0 AS children,
                     (SELECT MIN(br.expected_check_in_at) FROM booking_rooms br WHERE br.booking_id=b.id) AS expected,
                     (SELECT COUNT(*) FROM booking_rooms br WHERE br.booking_id=b.id AND br.status='PENDING') AS room_count,
-                    b.hold_expires_at,b.deposit_required_amount
+                    b.hold_expires_at,b.deposit_required_amount,b.special_requests
                 """
                                 + BALANCES
                                 + """
@@ -234,7 +237,11 @@ public class ReceptionDashboardService {
                 total,
                 paid,
                 total.subtract(paid),
-                r.money("deposit_required_amount").min(total.max(ZERO)).subtract(paid).max(ZERO));
+                r.money("deposit_required_amount").min(total.max(ZERO)).subtract(paid).max(ZERO),
+                (r.s("special_requests") == null || r.s("special_requests").isBlank())
+                                && r.n("has_requests") == 1
+                        ? "⭐"
+                        : r.s("special_requests"));
     }
 
     private Shift shift() {

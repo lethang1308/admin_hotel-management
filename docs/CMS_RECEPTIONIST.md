@@ -68,3 +68,5 @@ Thực thi `mvnw.cmd test` tại backend. Cơ sở dữ liệu MySQL cho kiểm 
 Bộ hồi quy H2 đạt 113 bài, một bài MySQL opt-in được bỏ qua trong lệnh mặc định. Bộ MySQL riêng đạt 16/16 bài cho Dashboard lễ tân và các luồng đặt phòng, thanh toán, hóa đơn hiện có. Luồng HTTP thực đã nhận sự kiện SSE sau khi trạng thái đơn được commit và đối chiếu thông báo chưa đọc. JavaScript qua kiểm tra cú pháp. Kiểm tra trực quan qua công cụ điều khiển trình duyệt bị dừng vì công cụ không xác định chắc URL cửa sổ Windows.
 
 Mô-đun sử dụng schema hiện có, không bổ sung migration.
+
+Mô-đun 5 — Sơ đồ phòng, dọn phòng, bảo trì, lịch sử khách, yêu cầu đặc biệt và email: [CMS_RECEPTIONIST_ROOM_CARE.md](CMS_RECEPTIONIST_ROOM_CARE.md). Cần Flyway V8.

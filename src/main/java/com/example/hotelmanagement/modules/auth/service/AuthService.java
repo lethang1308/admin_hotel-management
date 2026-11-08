@@ -68,6 +68,11 @@ public class AuthService {
                     "An account with email '" + normalizedEmail + "' already exists");
         }
 
+        String phone =
+                com.example.hotelmanagement.common.util.PhoneNumbers.normalize(request.getPhone());
+        if (userRepository.existsByPhone(phone)
+                || userRepository.existsByPhone("+84" + phone.substring(1)))
+            throw new DuplicateResourceException("Số điện thoại đã được sử dụng");
         Role userRole = roleService.getRequiredByCode(SecurityConstants.ROLE_USER);
         Set<Role> roles = new LinkedHashSet<>();
         roles.add(userRole);
@@ -76,12 +81,13 @@ public class AuthService {
                 User.builder()
                         .fullName(request.getFullName().trim())
                         .email(normalizedEmail)
+                        .phone(phone)
                         .passwordHash(passwordEncoder.encode(request.getPassword()))
                         .status(UserStatus.ACTIVE)
                         .roles(roles)
                         .build();
 
-        User saved = userRepository.save(newUser);
+        User saved = userRepository.saveAndFlush(newUser);
         profiles.provision(saved);
         log.info("Registered new user account id={} email={}", saved.getId(), saved.getEmail());
         return issueTokens(saved, UUID.randomUUID().toString(), ipAddress, userAgent);
@@ -118,7 +124,7 @@ public class AuthService {
         String incomingHash = TokenHashUtils.sha256Hex(request.getRefreshToken().trim());
         RefreshToken storedToken =
                 refreshTokenRepository
-                        .findByTokenHash(incomingHash)
+                        .lockByTokenHash(incomingHash)
                         .orElseThrow(
                                 () ->
                                         new UnauthorizedException(
@@ -196,13 +202,8 @@ public class AuthService {
                 .findByTokenHash(tokenHash)
                 .ifPresent(
                         token -> {
-                            if (!token.isRevoked()) {
-                                token.setRevokedAt(Instant.now());
-                                refreshTokenRepository.save(token);
-                                log.info(
-                                        "Revoked refresh token session for userId={}",
-                                        token.getUser().getId());
-                            }
+                            refreshTokenRepository.revokeAllActiveByFamilyId(
+                                    token.getFamilyId(), Instant.now());
                         });
     }
 

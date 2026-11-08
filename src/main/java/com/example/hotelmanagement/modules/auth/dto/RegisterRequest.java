@@ -1,10 +1,13 @@
 package com.example.hotelmanagement.modules.auth.dto;
 
 import com.example.hotelmanagement.common.validation.StrongPassword;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +35,14 @@ public class RegisterRequest {
 
     @NotBlank(message = "Password is required")
     @StrongPassword
-    @Schema(description = "Password (8-72 characters, at least 1 letter and 1 number)", example = "Welcome123")
+    @Schema(
+            description = "Password (8-72 characters, at least 1 letter and 1 number)",
+            example = "Welcome123")
     private String password;
+
+    @NotBlank(message = "Số điện thoại không được để trống")
+    @jakarta.validation.constraints.Pattern(
+            regexp = "^(?:0|\\+84)[35789][0-9]{8}$",
+            message = "Số điện thoại Việt Nam không hợp lệ")
+    private String phone;
 }
