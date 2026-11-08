@@ -202,18 +202,18 @@ class CmsBookingOperationsIntegrationTest {
                         line,
                         new BookingChangeService.Change("CHANGE_ROOM", null, null, upgrade),
                         "Upgrade");
-        changes.decide(booking, change, true, "Approved");
+        changes.decide(booking, change, true, "Approved refund");
         changes.decide(booking, change, true, "Retried");
         assertThat(
                         db.count(
                                 "SELECT COUNT(*) FROM booking_room_nights WHERE booking_room_id=?"
-                                    + " AND inventory_state='RELEASED'",
+                                        + " AND inventory_state='RELEASED'",
                                 line))
                 .isEqualTo(2);
         assertThat(
                         db.count(
                                 "SELECT COUNT(*) FROM booking_room_nights WHERE booking_room_id=?"
-                                    + " AND revision=2",
+                                        + " AND revision=2",
                                 line))
                 .isEqualTo(2);
         assertThat(db.count("SELECT COUNT(*) FROM room_night_claims WHERE room_id=?", upgrade))
@@ -230,7 +230,7 @@ class CmsBookingOperationsIntegrationTest {
         assertThat(
                         db.count(
                                 "SELECT COUNT(*) FROM booking_room_nights WHERE booking_room_id=?"
-                                    + " AND stay_date=?",
+                                        + " AND stay_date=?",
                                 line,
                                 today.plusDays(3)))
                 .isEqualTo(2);
@@ -280,7 +280,7 @@ class CmsBookingOperationsIntegrationTest {
                                             paid,
                                             "BANK_TRANSFER",
                                             new BigDecimal("680001"),
-                                            "Too much"))
+                                            "Amount too large"))
                     .isInstanceOf(AppException.class);
             long refund =
                     payments.refund(
@@ -289,7 +289,7 @@ class CmsBookingOperationsIntegrationTest {
                             paid,
                             "BANK_TRANSFER",
                             new BigDecimal("680000"),
-                            "Approved");
+                            "Approved refund");
             assertThat(refund).isPositive();
             assertThat(ledger.balance(booking).debt()).isEqualByComparingTo("0");
         } finally {
@@ -366,7 +366,7 @@ class CmsBookingOperationsIntegrationTest {
                 .isInstanceOf(AppException.class);
         db.update(
                 "INSERT INTO employees(user_id,employee_code) SELECT ?,? WHERE NOT EXISTS(SELECT 1"
-                    + " FROM employees WHERE user_id=?)",
+                        + " FROM employees WHERE user_id=?)",
                 user,
                 "TEST-OPS",
                 user);
@@ -449,13 +449,13 @@ class CmsBookingOperationsIntegrationTest {
                         line,
                         new BookingChangeService.Change("CHANGE_ROOM", null, null, other),
                         "Move");
-        changes.decide(booking, change, true, "Approved");
+        changes.decide(booking, change, true, "Approved refund");
         assertThat(db.count("SELECT COUNT(*) FROM stay_guests WHERE booking_id=?", booking))
                 .isEqualTo(2);
         assertThat(
                         db.count(
                                 "SELECT COUNT(*) FROM stay_guests WHERE booking_id=? AND"
-                                    + " departed_at IS NULL",
+                                        + " departed_at IS NULL",
                                 booking))
                 .isEqualTo(1);
         assertThat(db.count("SELECT COUNT(*) FROM room_night_claims WHERE room_id=?", other))

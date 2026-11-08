@@ -59,6 +59,7 @@
 <label class="form-check"><input type="checkbox" class="form-check-input" name="issueInvoice" checked><span class="form-check-label" th:text="#{stay.issueInvoice}"></span></label>
 <p class="small text-muted" data-invoice-hint th:text="#{stay.invoiceFinal}"></p>
 <label class="form-label"><span th:text="#{ops.address}"></span><input class="form-control" name="buyerAddress" maxlength="500"></label>
+<label class="form-label"><span th:text="#{cashier.company}"></span><input class="form-control" name="buyerCompany" maxlength="200"></label>
 <label class="form-label"><span th:text="#{ops.taxCode}"></span><input class="form-control" name="taxCode" maxlength="30"></label></div>
 <label class="form-label mt-3"><span th:text="#{reception.reason}"></span><input class="form-control" name="reason" maxlength="500" required></label>
 <div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" data-procedure-submit th:text="#{reception.confirmAction}"></button><button type="button" class="btn btn-light" data-reload-procedure th:text="#{stay.refreshBill}"></button></div>
@@ -75,6 +76,7 @@
 <label class="form-label"><span th:text="#{reception.document}"></span><input class="form-control" name="document" maxlength="60"></label></div></fieldset></template>
 <div hidden><span th:each="s:${#strings.arraySplit('PENDING,CONFIRMED,CHECKED_IN,CHECKED_OUT,CANCELLED,REJECTED,NO_SHOW',',')}" th:data-stay-status="${s}" th:text="#{${'ops.'+s}}"></span></div>
 <div id="stay-workflow-labels" hidden>
+<span data-label="cashier" th:text="#{cashier.title}"></span>
 <span data-label="checkin" th:text="#{reception.checkin}"></span><span data-label="checkout" th:text="#{reception.checkout}"></span>
 <span data-label="adult" th:text="#{reception.adult}"></span><span data-label="child" th:text="#{reception.child}"></span>
 <span data-label="empty" th:text="#{cms.empty}"></span><span data-label="error" th:text="#{deskBook.loadError}"></span>

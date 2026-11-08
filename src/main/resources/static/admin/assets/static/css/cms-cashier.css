@@ -1,0 +1,11 @@
+.cashier-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8rem}
+.cashier-totals>div{padding:1rem;border:1px solid var(--bs-border-color);border-radius:.5rem}
+.cashier-totals small{display:block;color:var(--bs-secondary-color);margin-bottom:.35rem}
+.cashier-totals strong{display:block;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cashier-totals [data-debt-state=owed]{border-color:var(--bs-danger)}
+.cashier-totals [data-debt-state=refund]{border-color:var(--bs-warning)}
+.cashier-totals [data-debt-state=settled]{border-color:var(--bs-success)}
+.cashier-deposit progress{height:.6rem;accent-color:var(--bs-success)}
+.cashier-qr{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}.cashier-qr img{width:220px;height:220px}
+.cashier-request{border:1px solid var(--bs-border-color);padding:1rem;border-radius:.5rem;margin:.7rem 0}
+@media(max-width:767px){.cashier-totals{grid-template-columns:repeat(2,minmax(0,1fr))}.cashier-qr img{width:180px;height:180px}}

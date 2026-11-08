@@ -40,7 +40,7 @@ public class HotelServiceCatalogue {
                 code.length() <= 30
                         && db.count(
                                         "SELECT COUNT(*) FROM service_categories WHERE"
-                                            + " UPPER(code)=? AND id<>?",
+                                                + " UPPER(code)=? AND id<>?",
                                         code,
                                         id == null ? -1 : id)
                                 == 0,
@@ -88,7 +88,7 @@ public class HotelServiceCatalogue {
                 code.length() <= 40
                         && db.count(
                                         "SELECT COUNT(*) FROM services WHERE UPPER(code)=? AND"
-                                            + " id<>?",
+                                                + " id<>?",
                                         code,
                                         id == null ? -1 : id)
                                 == 0,
@@ -159,6 +159,19 @@ public class HotelServiceCatalogue {
     @PreAuthorize("hasAuthority('service.usage.manage')")
     public long use(
             long booking, long line, long service, BigDecimal quantity, String key, String notes) {
+        return useReviewed(booking, line, service, quantity, key, notes, null, null);
+    }
+
+    @PreAuthorize("hasAuthority('service.usage.manage')")
+    public long useReviewed(
+            long booking,
+            long line,
+            long service,
+            BigDecimal quantity,
+            String key,
+            String notes,
+            BigDecimal expectedPrice,
+            BigDecimal expectedTax) {
         db.lockBooking(booking);
         db.require(key != null && key.matches("[A-F0-9]{24}") && db.actor() != null, "input");
         db.require(
@@ -186,7 +199,7 @@ public class HotelServiceCatalogue {
         var allocation =
                 db.one(
                         "SELECT id FROM room_allocations WHERE booking_room_id=? AND"
-                            + " status='OCCUPIED'",
+                                + " status='OCCUPIED'",
                         line);
         var item =
                 db.one(
@@ -195,6 +208,13 @@ public class HotelServiceCatalogue {
                 WHERE s.id=? AND s.is_active=TRUE AND c.is_active=TRUE FOR UPDATE
                 """,
                         service);
+        if (expectedPrice != null || expectedTax != null)
+            db.require(
+                    expectedPrice != null
+                            && expectedTax != null
+                            && expectedPrice.compareTo(item.money("unit_price")) == 0
+                            && expectedTax.compareTo(item.money("tax_percent")) == 0,
+                    "priceChanged");
         Instant now = Instant.now();
         long id =
                 db.insert(
@@ -230,8 +250,27 @@ public class HotelServiceCatalogue {
                 quantity,
                 item.money("unit_price"),
                 item.money("tax_percent"));
-        BigDecimal tax =
-                percent(quantity.multiply(item.money("unit_price")), item.money("tax_percent"));
+        BigDecimal raw =
+                quantity.multiply(item.money("unit_price"))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal rounded = vnd(raw);
+        if (rounded.compareTo(raw) != 0)
+            ledger.charge(
+                    booking,
+                    line,
+                    null,
+                    id,
+                    null,
+                    null,
+                    null,
+                    "SERVICE-ROUND:" + id,
+                    "ADJUSTMENT",
+                    "Làm tròn VND · " + item.s("name"),
+                    day,
+                    BigDecimal.ONE,
+                    rounded.subtract(raw),
+                    null);
+        BigDecimal tax = percent(rounded, item.money("tax_percent"));
         if (tax.signum() > 0)
             ledger.charge(
                     booking,
@@ -255,6 +294,7 @@ public class HotelServiceCatalogue {
                 Map.of(),
                 Map.of("usage", id, "quantity", quantity),
                 notes);
+        db.event("SERVICE:" + id, "BOOKING_SERVICE_ADDED", booking);
         return id;
     }
 
@@ -282,5 +322,6 @@ public class HotelServiceCatalogue {
                 booking,
                 id);
         db.audit("SERVICE_USAGE_VOID", "BOOKING", booking, Map.of(), Map.of("usage", id), reason);
+        db.event("SERVICE-VOID:" + id, "BOOKING_SERVICE_VOIDED", booking);
     }
 }

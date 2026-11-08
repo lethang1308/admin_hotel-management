@@ -19,7 +19,7 @@
 <td class="text-nowrap"><span th:text="${#numbers.formatDecimal(r.debt,1,'COMMA',0,'POINT')}+' ₫'"></span>
 <small class="d-block text-muted"><span th:text="#{reception.netPaid}"></span> <span th:text="${#numbers.formatDecimal(r.paid,1,'COMMA',0,'POINT')}"></span></small>
 <small th:if="${r.depositDue.signum()>0}" class="d-block text-danger"><span th:text="#{reception.depositShort}"></span> <span th:text="${#numbers.formatDecimal(r.depositDue,1,'COMMA',0,'POINT')}"></span></small></td>
-<td><div class="d-flex flex-wrap gap-2" th:if="${r.lineId != null}">
+<td><button type="button" class="btn btn-sm btn-outline-primary mb-2" data-open-cashier th:data-booking="${r.bookingId}" th:text="#{cashier.title}"></button><div class="d-flex flex-wrap gap-2" th:if="${r.lineId != null}">
 <th:block th:if="${r.status == 'CONFIRMED'}"><button type="button" class="btn btn-sm btn-outline-primary"
     data-desk-action="checkin" th:data-booking="${r.bookingId}" th:data-line="${r.lineId}"
     th:data-code="${r.code}" sec:authorize="hasAuthority('booking.checkin')" th:text="#{reception.checkin}"></button></th:block>

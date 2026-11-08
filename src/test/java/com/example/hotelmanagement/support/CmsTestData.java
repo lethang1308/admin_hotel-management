@@ -14,6 +14,10 @@ public final class CmsTestData {
         jdbc.update("DELETE FROM notification_deliveries");
         jdbc.update("DELETE FROM notifications");
         jdbc.update("DELETE FROM payment_webhook_events");
+        jdbc.update("DELETE FROM refund_requests");
+        jdbc.update(
+                "UPDATE hotel_settings SET"
+                    + " bank_bin=NULL,bank_account_number=NULL,bank_account_name=NULL,bank_revision=0");
         jdbc.update("DELETE FROM invoice_lines");
         for (String table : new String[] {"invoices", "payment_transactions", "booking_charges"}) {
             for (Long id :

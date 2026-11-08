@@ -1,0 +1,83 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><body>
+<div th:fragment="dialog" id="cashier-root" sec:authorize="hasAuthority('booking.read.any')"
+ th:data-api="@{/admin/receptionist/cashier/}" th:data-invoices="@{/admin/invoices/}" th:data-user="${#authentication.principal.id}"
+ th:data-refund="${#authorization.expression(&quot;hasAuthority('payment.refund')&quot;)}">
+<dialog id="cashier-dialog" class="reception-dialog stay-procedure-dialog">
+<div class="reception-dialog-heading"><h5 th:text="#{cashier.title}"></h5><button type="button" class="btn-close" data-cashier-close th:aria-label="#{reception.close}"></button></div>
+<p data-cashier-booking class="text-muted"></p><p data-cashier-state role="status"></p>
+<div data-cashier-content hidden>
+<div data-cashier-balance class="cashier-totals"></div>
+<div class="cashier-deposit border rounded p-3 my-3"><div class="d-flex flex-wrap justify-content-between gap-2"><strong th:text="#{ops.deposit}"></strong><span data-deposit-caption></span></div>
+<progress class="w-100 mt-2" data-deposit-progress max="1" value="0"></progress><small class="text-muted" data-hold-countdown></small></div>
+<nav class="d-flex flex-wrap gap-2 mb-3" th:aria-label="#{cashier.tabs}">
+<button type="button" class="btn btn-primary" data-cashier-view="services" th:text="#{cashier.services}"></button>
+<button type="button" class="btn btn-light" data-cashier-view="payments" th:text="#{ops.payments}"></button>
+<button type="button" class="btn btn-light" data-cashier-view="refunds" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')" th:text="#{cashier.refunds}"></button>
+<button type="button" class="btn btn-light" data-cashier-view="invoice" sec:authorize="hasAuthority('invoice.manage')" th:text="#{ops.invoice}"></button>
+<button type="button" class="btn btn-link ms-auto" data-cashier-refresh th:text="#{reception.refresh}"></button></nav>
+
+<section data-cashier-panel="services">
+<form id="cashier-service" class="border rounded p-3 mb-4" sec:authorize="hasAuthority('service.usage.manage')">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{reception.room}"></span><select name="line" class="form-select" required></select></label>
+<label class="form-label"><span th:text="#{cashier.category}"></span><select name="category" class="form-select"></select></label>
+<label class="form-label"><span th:text="#{reception.service}"></span><select name="service" class="form-select" required></select></label></div>
+<div class="booking-input-grid my-3"><label class="form-label"><span th:text="#{reception.quantity}"></span>
+<div class="input-group"><button type="button" class="btn btn-outline-secondary" data-quantity="-1" th:aria-label="#{cashier.less}">−</button><input class="form-control" name="quantity" type="number" min="0.001" step="0.001" max="9999999.999" value="1" required><button type="button" class="btn btn-outline-secondary" data-quantity="1" th:aria-label="#{cashier.more}">+</button></div></label>
+<div data-service-preview class="small"></div></div>
+<label class="form-label"><span th:text="#{ops.notes}"></span><input class="form-control" name="notes" maxlength="500"></label>
+<button class="btn btn-primary" data-service-save th:text="#{reception.addService}"></button></form>
+<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th th:text="#{reception.room}"></th><th th:text="#{reception.service}"></th><th th:text="#{ops.quantity}"></th><th th:text="#{ops.unitPrice}"></th><th th:text="#{ops.tax}"></th><th th:text="#{ops.total}"></th><th th:text="#{ops.actions}"></th></tr></thead><tbody data-cashier-usages></tbody></table></div>
+</section>
+
+<section data-cashier-panel="payments" hidden>
+<form id="cashier-payment" class="border rounded p-3 mb-4" sec:authorize="hasAuthority('payment.collect')">
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{ops.kind}"></span><select name="kind" class="form-select"><option value="DEPOSIT" th:text="#{ops.DEPOSIT}"></option><option value="PAYMENT" th:text="#{ops.PAYMENT}"></option></select></label>
+<label class="form-label"><span th:text="#{ops.method}"></span><select name="method" class="form-select"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label>
+<label class="form-label"><span th:text="#{stay.transactionAmount}"></span><input class="form-control" name="amount" type="number" min="1" max="9999999999999" step="1" required></label></div>
+<button type="button" class="btn btn-link btn-sm px-0" data-pay-debt th:text="#{cashier.payDebt}"></button>
+<p data-cashier-shift class="small"></p>
+<div data-bank-fields><label class="form-label"><span th:text="#{cashier.reference}"></span><input class="form-control" name="reference" maxlength="150" autocomplete="off"></label>
+<label class="form-label"><span th:text="#{cashier.proof}"></span><input class="form-control" name="proof" type="file" accept="image/png,image/jpeg"></label>
+<button type="button" class="btn btn-outline-primary btn-sm my-2" data-bank-qr th:text="#{cashier.bankQr}"></button>
+<div data-bank-qr-result class="cashier-qr border rounded p-3 mb-3" hidden></div></div>
+<label class="form-label"><span th:text="#{ops.reason}"></span><input class="form-control" name="reason" maxlength="1000"></label>
+<p class="small text-muted" th:text="#{cashier.manualHint}"></p><button class="btn btn-primary" data-payment-save th:text="#{cashier.collect}"></button></form>
+<details class="border rounded p-3 mb-3" data-cashier-open-shift hidden sec:authorize="hasAnyAuthority('payment.collect','payment.refund')"><summary th:text="#{reception.openShift}"></summary>
+<form id="cashier-shift" class="pt-3"><label class="form-label"><span th:text="#{reception.opening}"></span><input class="form-control" name="cash" type="number" value="0" min="0" step="1" max="9999999999999" required></label>
+<label class="form-label"><span th:text="#{reception.shiftNotes}"></span><input class="form-control" name="notes" maxlength="1000"></label><button class="btn btn-primary" th:text="#{reception.openShift}"></button></form></details>
+<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th th:text="#{ops.code}"></th><th th:text="#{ops.kind}"></th><th th:text="#{ops.method}"></th><th th:text="#{ops.total}"></th><th th:text="#{cashier.reference}"></th><th th:text="#{ops.day}"></th><th th:text="#{cashier.employee}"></th></tr></thead><tbody data-cashier-payments></tbody></table></div>
+</section>
+
+<section data-cashier-panel="refunds" hidden>
+<form id="cashier-refund" class="border rounded p-3 mb-3" sec:authorize="hasAnyAuthority('payment.collect','payment.refund')">
+<h6 th:text="${#authorization.expression(&quot;hasAuthority('payment.refund')&quot;)} ? #{cashier.refundNow} : #{cashier.requestRefund}"></h6>
+<p class="small text-muted" th:text="#{cashier.refundHint}"></p>
+<div class="booking-input-grid">
+<label class="form-label"><span th:text="#{stay.refundParent}"></span><select name="parent" class="form-select" required></select></label>
+<label class="form-label"><span th:text="#{ops.total}"></span><input name="amount" class="form-control" type="number" min="1" max="9999999999999" step="1" required></label>
+<label class="form-label"><span th:text="#{ops.method}"></span><select name="method" class="form-select"><option value="BANK_TRANSFER" th:text="#{reception.bank}"></option><option value="CASH" th:text="#{reception.cash}"></option></select></label></div>
+<label class="form-label mt-3"><span th:text="#{ops.reason}"></span><input name="reason" class="form-control" minlength="10" maxlength="500" required></label>
+<label class="form-label" sec:authorize="hasAuthority('payment.refund')"><span th:text="#{cashier.reference}"></span><input name="reference" class="form-control" maxlength="150"></label>
+<button class="btn btn-primary" data-refund-save th:text="${#authorization.expression(&quot;hasAuthority('payment.refund')&quot;)} ? #{cashier.refundNow} : #{cashier.requestRefund}"></button></form>
+<div data-cashier-requests></div></section>
+
+<section data-cashier-panel="invoice" hidden>
+<form id="cashier-invoice" class="border rounded p-3" sec:authorize="hasAuthority('invoice.manage')">
+<p data-invoice-caption></p><div class="booking-input-grid">
+<label class="form-label"><span th:text="#{cashier.company}"></span><input name="company" class="form-control" maxlength="200"></label>
+<label class="form-label"><span th:text="#{ops.taxCode}"></span><input name="taxCode" class="form-control" maxlength="30"></label></div>
+<label class="form-label"><span th:text="#{ops.address}"></span><input name="address" class="form-control" maxlength="500"></label>
+<p class="small text-muted" th:text="#{ops.invoiceHint}"></p><button class="btn btn-primary" data-invoice-save th:text="#{cashier.issuePdf}"></button>
+<a data-existing-invoice hidden class="btn btn-outline-primary" th:text="#{stay.download}"></a></form></section>
+</div></dialog>
+
+<dialog id="cashier-reason-dialog" class="reception-dialog"><div class="reception-dialog-heading"><h5 data-reason-heading></h5><button type="button" class="btn-close" data-cashier-close th:aria-label="#{reception.close}"></button></div>
+<form id="cashier-reason"><label class="form-label"><span th:text="#{ops.reason}"></span><input name="reason" class="form-control" maxlength="500" required></label>
+<label class="form-label" data-decision-reference hidden><span th:text="#{cashier.reference}"></span><input name="reference" class="form-control" maxlength="150"></label>
+<p data-reason-error role="alert"></p><button class="btn btn-primary" th:text="#{reception.confirmAction}"></button></form></dialog>
+<div hidden id="cashier-labels">
+<span th:each="k:${#strings.arraySplit('depositSatisfied,employeeMissing,total,collected,refunded,net,debt,refundDue,depositShortfall,depositRequired,category,all,unitPrice,tax,totalCost,void,employee,proof,refundNow,requestRefund,approve,reject,withdraw,success,loading,priceChanged,noRoom,invoiceFinal,invoiceReady,shiftMissing,shiftOpen,bankMissing,memo,bankName,account,owner,advance,expired,rounding,closed,reference',',')}" th:data-label="${k}" th:text="#{${'cashier.'+k}}"></span>
+<span th:each="s:${#strings.arraySplit('PENDING,COMPLETED,REJECTED,WITHDRAWN,ACTIVE,VOIDED,DEPOSIT,PAYMENT,REFUND,CASH,BANK_TRANSFER,SUCCEEDED',',')}" th:data-cashier-status="${s}" th:text="#{${'cashier.status.'+s}}"></span></div>
+</div></body></html>

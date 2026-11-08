@@ -43,6 +43,11 @@
                         th:data-event-booking-room-checked-in="#{reception.event.booking_room_checked_in}"
                         th:data-event-booking-room-checked-out="#{reception.event.booking_room_checked_out}"
                         th:data-event-payment-collected="#{reception.event.payment_collected}"
+                        th:data-cashier-base="@{/admin/receptionist/cashier}"
+                        th:data-event-booking-service-added="#{reception.event.booking_service_added}"
+                        th:data-event-booking-service-voided="#{reception.event.booking_service_voided}"
+                        th:data-event-booking-refund-requested="#{reception.event.booking_refund_requested}"
+                        th:data-event-booking-refund-resolved="#{reception.event.booking_refund_resolved}"
                         th:data-event-payment-refunded="#{reception.event.payment_refunded}">
                         <button class="btn btn-link nav-link position-relative" data-bs-toggle="dropdown"
                                 th:aria-label="#{reception.notifications}" aria-expanded="false">

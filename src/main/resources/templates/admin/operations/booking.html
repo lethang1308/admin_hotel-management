@@ -10,6 +10,7 @@
   
   <div class="card-body">
 <h4 th:text="${d.booking.s('booking_code')}"></h4>
+<button type="button" class="btn btn-sm btn-primary mb-3" data-open-cashier th:data-booking="${d.booking.id('id')}" th:text="#{cashier.title}"></button>
 <button type="button" class="btn btn-sm btn-primary mb-3" data-stay-all th:data-booking="${d.booking.id('id')}" th:data-stay-lines="${#strings.listJoin(inHouseLines,',')}" th:if="${#lists.size(inHouseLines)>1}" sec:authorize="hasAuthority('booking.checkout')" th:text="#{stay.allRooms}"></button>
 <div class="alert alert-light-success" th:if="${walkInCreated}" th:text="#{deskBook.createdHint}"></div>
 <p><strong th:text="${d.booking.s('contact_name')}"></strong> · <span th:text="${d.booking.s('contact_phone')}"></span> · <span th:text="${d.booking.s('contact_email')}"></span></p>
@@ -286,7 +287,7 @@
 </tbody></table>
 </div><details class="border rounded p-3 mb-3" th:if="${#lists.contains({'CHECKED_OUT','CANCELLED','NO_SHOW','REJECTED'},d.booking.s('status'))}" sec:authorize="hasAuthority('invoice.manage')">
 <summary class="fw-semibold" th:text="#{ops.issue}"></summary>
-<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/invoice(id=${d.booking.id('id')})}"  >
+<div class="pt-3"><form method="post" th:action="@{/admin/bookings/{id}/invoice(id=${d.booking.id('id')})}"  ><label class="form-label"><span th:text="#{cashier.company}"></span><input class="form-control" name="company" maxlength="200"></label>
 <div class="row g-3 align-items-end"><div class="col-12 col-md"><label class="form-label d-block mb-0">
   <span th:text="#{ops.address}"></span>
   <input class="form-control" type="text" name="address"  maxlength="500">

@@ -75,7 +75,7 @@
 <a class="btn btn-sm btn-outline-primary" sec:authorize="hasAuthority('booking.checkout')"
  th:if="${room.s('status') == 'CHECKED_IN'}"
  th:href="@{/admin/receptionist(booking=${r.id('id')},line=${room.id('id')},action='checkout')}" th:text="#{reception.checkout}"></a>
-</div><a class="btn btn-sm btn-light" th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="#{reception.details}"></a></td>
+</div><button class="btn btn-sm btn-outline-primary mb-1" type="button" data-open-cashier th:data-booking="${r.id('id')}" th:text="#{cashier.title}"></button><a class="btn btn-sm btn-light" th:href="@{/admin/bookings/{id}(id=${r.id('id')})}" th:text="#{reception.details}"></a></td>
 </tr></tbody></table></div><nav class="d-flex gap-2 align-items-center mt-3" th:aria-label="#{ops.paging}">
   <a th:if="${previous != null}" th:href="${previous}" class="btn btn-light" th:text="#{ops.previous}"></a>
   <span class="text-muted" th:text="${(page.index + 1) + ' · ' + page.total}"></span>

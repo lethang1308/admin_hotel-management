@@ -27,15 +27,22 @@ import java.util.*;
 public class InvoiceService {
     private final OperationsStore db;
     private final com.example.hotelmanagement.modules.reception.QrCodeSupport qr;
+    private final com.example.hotelmanagement.modules.hotel.service.HotelMediaStorage media;
 
     @Value("${app.invoice.directory:uploads/invoices-private}")
     private String directory;
 
-    public record Seller(String name, String address, String hotline, String email) {}
+    public record Seller(
+            String name, String address, String hotline, String email, String logoUrl) {}
 
     public record Download(String name, byte[] data) {}
 
     public long issue(long booking, String buyerAddress, String taxCode) {
+        return issue(booking, buyerAddress, taxCode, null);
+    }
+
+    public long issue(long booking, String buyerAddress, String taxCode, String company) {
+        company = db.optional(company, 200);
         var order = db.lockBooking(booking);
         var existing =
                 db.rows(
@@ -67,7 +74,11 @@ public class InvoiceService {
         var hotel = db.settings();
         var seller =
                 new Seller(
-                        hotel.s("name"), hotel.s("address"), hotel.s("hotline"), hotel.s("email"));
+                        hotel.s("name"),
+                        hotel.s("address"),
+                        hotel.s("hotline"),
+                        hotel.s("email"),
+                        hotel.s("logo_url"));
         BigDecimal subtotal = ZERO, tax = ZERO;
         for (var charge : charges) {
             if (charge.s("kind").equals("TAX")) tax = tax.add(charge.money("amount"));
@@ -87,7 +98,7 @@ public class InvoiceService {
                 db.insert(
                         "invoices",
                         "invoice_number,booking_id,revision,supersedes_invoice_id,status,seller_snapshot,buyer_name,buyer_email,"
-                            + "buyer_address,buyer_tax_code,currency,subtotal_amount,tax_amount,total_amount,issued_by,issued_at",
+                            + "buyer_address,buyer_tax_code,currency,subtotal_amount,tax_amount,total_amount,issued_by,issued_at,buyer_company_name",
                         code("HD"),
                         booking,
                         revision,
@@ -103,7 +114,8 @@ public class InvoiceService {
                         tax,
                         total,
                         db.actor(),
-                        ts(now));
+                        ts(now),
+                        company);
         int number = 0;
         for (var charge : charges)
             db.insert(
@@ -231,7 +243,7 @@ public class InvoiceService {
                 <h1>Hóa đơn nội bộ</h1>
                 <p class="muted">Internal invoice · %s · Phiên bản %d · %s</p>
                 <p>Mã đặt phòng: %s</p>
-                <p>Khách hàng: <b>%s</b> %s</p><p>%s %s</p>
+                <p>Khách hàng: <b>%s</b> %s</p><p>Địa chỉ: %s</p><p>Mã số thuế: %s</p>
                 <table><thead><tr><th>Ngày</th><th>Diễn giải</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
                 <tbody>%s</tbody></table>
                 <p class="num">Trước thuế: %s VND</p><p class="num">Thuế: %s VND</p>
@@ -256,6 +268,33 @@ public class InvoiceService {
                                 number(invoice, "subtotal_amount"),
                                 number(invoice, "tax_amount"),
                                 number(invoice, "total_amount"));
+        String companyLine =
+                invoice.s("buyer_company_name") == null
+                        ? ""
+                        : "<p>Đơn vị / Công ty: <b>"
+                                + escape(invoice.s("buyer_company_name"))
+                                + "</b></p>";
+        String logo = "";
+        if (seller.logoUrl() != null
+                && seller.logoUrl().matches("/media/hotel/[a-f0-9]{32}\\.(png|jpg)")) {
+            try {
+                Path path =
+                        media.root()
+                                .resolve(seller.logoUrl().substring("/media/hotel/".length()))
+                                .normalize();
+                if (path.startsWith(media.root()) && Files.size(path) <= 5 * 1024 * 1024)
+                    logo =
+                            "<img style='max-width:120pt;max-height:42pt' src='data:image/"
+                                    + (seller.logoUrl().endsWith(".png") ? "png" : "jpeg")
+                                    + ";base64,"
+                                    + Base64.getEncoder().encodeToString(Files.readAllBytes(path))
+                                    + "' />";
+            } catch (IOException ignored) {
+            }
+        }
+        html =
+                html.replace("<body>", "<body>" + logo)
+                        .replace("<table><thead>", companyLine + "<table><thead>");
         String footer =
                 "<table style='margin-top:24pt'><tr><td style='width:30%;border:0'><img"
                         + " style='width:85pt;height:85pt' src='"
@@ -290,6 +329,11 @@ public class InvoiceService {
     }
 
     private String number(Row row, String key) {
-        return row.money(key).stripTrailingZeros().toPlainString();
+        var format =
+                new java.text.DecimalFormat(
+                        "#,##0.###",
+                        java.text.DecimalFormatSymbols.getInstance(
+                                java.util.Locale.forLanguageTag("vi-VN")));
+        return format.format(row.money(key));
     }
 }

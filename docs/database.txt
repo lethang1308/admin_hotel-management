@@ -156,6 +156,10 @@ Table audit_logs {
 
 // ── 02. KHÁCH SẠN, PHÒNG, VẬN HÀNH ────────────────────────────────────────
 Table hotel_settings {
+  bank_bin varchar(6)
+  bank_account_number varchar(19)
+  bank_account_name varchar(50)
+  bank_revision int [not null, default: 0]
   id bigint [pk, note: 'Một khách sạn, duy nhất dòng id=1.']
   name varchar(200) [not null]
   description text
@@ -895,6 +899,8 @@ Ref: booking_charges.(cancellation_id, booking_id) > booking_cancellations.(id, 
 Ref: booking_charges.(adjusts_charge_id, booking_id) > booking_charges.(id, booking_id)
 
 Table payment_transactions {
+  receipt_storage_key varchar(80)
+  receipt_sha256 char(64)
   id bigint [pk, increment]
   transaction_code varchar(40) [not null, unique]
   booking_id bigint [not null, ref: > bookings.id]
@@ -950,6 +956,7 @@ Table payment_webhook_events {
 }
 
 Table invoices {
+  buyer_company_name varchar(200)
   id bigint [pk, increment]
   invoice_number varchar(40) [not null, unique]
   booking_id bigint [not null, ref: > bookings.id]
@@ -1201,3 +1208,23 @@ TableGroup ThongBao_ChamSocKhach [color: #1098ad] {
   support_tickets
   support_messages
 }
+
+// V7: requests do not reserve money; approval rechecks the ledger and records an actual manual refund.
+Table refund_requests {
+  id bigint [pk, increment]
+  booking_id bigint [not null, ref: > bookings.id]
+  parent_payment_id bigint [not null]
+  request_key varchar(24) [not null, unique]
+  amount decimal(15,2) [not null]
+  method varchar(30) [not null]
+  reason varchar(500) [not null]
+  requested_by bigint [not null, ref: > users.id]
+  status varchar(20) [not null, default: 'PENDING']
+  handled_by bigint [ref: > users.id]
+  handled_at datetime(6)
+  response_note varchar(500)
+  payment_transaction_id bigint [unique]
+  created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+}
+Ref: refund_requests.(parent_payment_id, booking_id) > payment_transactions.(id, booking_id)
+Ref: refund_requests.(payment_transaction_id, booking_id) > payment_transactions.(id, booking_id)

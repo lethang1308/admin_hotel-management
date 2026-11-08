@@ -52,6 +52,19 @@ public class ReceptionOutboxDispatcher {
             long booking = event.id("aggregate_id");
             var order = db.one("SELECT booking_code FROM bookings WHERE id=?", booking);
             for (var user : recipients) {
+                if ("BOOKING_REFUND_REQUESTED".equals(event.s("event_type"))
+                        && db.count(
+                                        "SELECT COUNT(*) FROM user_roles ur JOIN role_permissions"
+                                            + " rp ON rp.role_id=ur.role_id JOIN permissions p ON"
+                                            + " p.id=rp.permission_id WHERE ur.user_id=? AND"
+                                            + " p.code='payment.refund'",
+                                        user.id("id"))
+                                == 0) continue;
+                if ("BOOKING_REFUND_RESOLVED".equals(event.s("event_type"))) {
+                    var payload = db.decode(event.s("payload"), Map.class);
+                    if (!Objects.toString(user.id("id"))
+                            .equals(Objects.toString(payload.get("recipientUserId")))) continue;
+                }
                 String key = "RECEPTION:" + event.id("id") + ":" + user.id("id");
                 if (db.count("SELECT COUNT(*) FROM notifications WHERE deduplication_key=?", key)
                         > 0) continue;

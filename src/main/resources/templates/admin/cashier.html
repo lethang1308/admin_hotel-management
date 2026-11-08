@@ -1,0 +1,20 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+ th:replace="~{admin/layouts/main :: layout(#{cashier.title},~{::#cashier-page},~{::#cashier-page-scripts})}"><body>
+<section id="cashier-page">
+<div class="reception-heading"><div><h3 th:text="#{cashier.title}"></h3><p class="text-muted" th:text="#{cashier.subtitle}"></p></div>
+<div class="d-flex flex-wrap gap-2"><button class="btn btn-primary" type="button" data-stay-lookup th:text="#{stay.lookup}"></button>
+<a class="btn btn-outline-primary" th:href="@{/admin/bookings}" th:text="#{ops.bookings}"></a><a class="btn btn-outline-primary" th:href="@{/admin/receptionist}" th:text="#{reception.shift}"></a></div></div>
+<div class="card"><div class="card-body"><p th:text="#{cashier.instructions}"></p></div></div>
+<div class="card" th:if="${refundQueue != null}"><div class="card-header"><h5 th:text="#{cashier.refundQueue}"></h5></div>
+<div class="card-body pt-0"><div class="table-responsive"><table class="table align-middle"><thead><tr><th th:text="#{ops.bookingCode}"></th><th th:text="#{ops.total}"></th><th th:text="#{cashier.employee}"></th><th th:text="#{ops.reason}"></th><th th:text="#{ops.actions}"></th></tr></thead><tbody>
+<tr th:if="${#lists.isEmpty(refundQueue)}"><td colspan="5" th:text="#{cms.empty}"></td></tr>
+<tr th:each="r:${refundQueue}"><td th:text="${r.booking_code}"></td><td th:text="${#numbers.formatDecimal(r.amount,1,'COMMA',0,'POINT')}+' ₫'"></td><td th:text="${r.requester}"></td><td th:text="${r.reason}"></td><td><button type="button" class="btn btn-outline-primary btn-sm" data-open-cashier data-cashier-tab="refunds" th:data-booking="${r.booking_id}" th:text="#{cashier.review}"></button></td></tr>
+</tbody></table></div></div></div>
+<details id="bank" class="card p-4" th:if="${bank != null}" sec:authorize="hasAuthority('hotel.manage')"><summary class="fw-semibold" th:text="#{cashier.bankSettings}"></summary>
+<form method="post" th:action="@{/admin/receptionist/cashier/bank}" class="mt-3">
+<input name="revision" type="hidden" th:value="${bank.revision}">
+<div class="booking-input-grid"><label class="form-label"><span th:text="#{cashier.bankBin}"></span><input name="bin" class="form-control" pattern="[0-9]{6}" maxlength="6" th:value="${bank.bin}"></label>
+<label class="form-label"><span th:text="#{cashier.account}"></span><input name="account" class="form-control" pattern="[0-9]{6,19}" maxlength="19" th:value="${bank.account}"></label>
+<label class="form-label"><span th:text="#{cashier.owner}"></span><input name="name" class="form-control" maxlength="50" th:value="${bank.name}"></label></div>
+<p class="small text-muted" th:text="#{cashier.bankSettingsHint}"></p><button class="btn btn-primary" th:text="#{reception.save}"></button></form></details>
+</section><th:block id="cashier-page-scripts"></th:block></body></html>

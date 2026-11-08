@@ -11,7 +11,9 @@
   <div class="card-body">
 <h5 th:text="${invoice.s('invoice_number')}"></h5>
 <p><a th:href="@{/admin/bookings/{id}(id=${invoice.id('booking_id')})}" th:text="${invoice.s('booking_code')}"></a> · <span class="badge bg-light-primary" th:text="#{${'ops.'+invoice.s('status')}}"></span></p>
-<p th:text="${invoice.s('buyer_name')}"></p><p class="text-muted" th:text="#{ops.invoiceHint}"></p>
+<p th:text="${invoice.s('buyer_name')}"></p>
+<p th:if="${invoice.s('buyer_company_name') != null}" th:text="${invoice.s('buyer_company_name')}"></p>
+<p th:text="${invoice.s('buyer_address')}"></p><p th:text="${invoice.s('buyer_tax_code')}"></p><p class="text-muted" th:text="#{ops.invoiceHint}"></p>
 <p><span th:text="#{ops.subtotal}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('subtotal_amount'),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.tax}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('tax_amount'),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.total}"></span> <strong><span class="text-nowrap" th:text="${#numbers.formatDecimal(invoice.money('total_amount'),1,'COMMA',0,'POINT')+' VND'}"></span></strong></p>
 <p><span th:text="#{ops.paid}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(balance.net(),1,'COMMA',0,'POINT')+' VND'}"></span> · <span th:text="#{ops.balance}"></span> <span class="text-nowrap" th:text="${#numbers.formatDecimal(balance.debt(),1,'COMMA',0,'POINT')+' VND'}"></span></p>
 <p th:if="${invoice.s('void_reason') != null}" th:text="${invoice.s('void_reason')}"></p><div class="table-responsive">

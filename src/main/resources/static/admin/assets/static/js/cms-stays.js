@@ -33,6 +33,7 @@
                     } catch(e) {root.querySelector('[data-lookup-state]').textContent=e.message;}
                 }));
             }
+            const cashier=elem('button',labels.cashier,'btn btn-sm btn-outline-primary');cashier.type='button';cashier.dataset.openCashier='';cashier.dataset.booking=booking.id;card.append(cashier);
             const occupied=booking.rooms.filter(r=>r.status==='CHECKED_IN');
             if(cfg.checkout==='true' && occupied.length>1) card.append(button(labels.allRooms,()=>open(booking.id,occupied.map(r=>r.id),'checkout',booking.code)));
             for(const room of booking.rooms) {
@@ -112,6 +113,7 @@
     }
     function paymentFields() {
         const action=current.action==='checkin'?(cfg.collect==='true'?'COLLECT':'NONE'):form.elements.paymentAction.value;
+        form.elements.reason.minLength=action==='REFUND'?10:1;
         root.querySelector('[data-money-fields]').hidden=action==='NONE';
         form.elements.amount.disabled=action==='NONE';
         form.elements.method.disabled=action==='NONE';
@@ -196,7 +198,7 @@
         } else {
             Object.assign(payload,{lines:current.lines,paymentAction:form.elements.paymentAction.value,parent:form.elements.parent.disabled?null:Number(form.elements.parent.value),
                 issueInvoice:!!form.elements.issueInvoice?.checked && !form.elements.issueInvoice?.disabled,
-                buyerAddress:form.elements.buyerAddress?.value,taxCode:form.elements.taxCode?.value});
+                buyerAddress:form.elements.buyerAddress?.value,taxCode:form.elements.taxCode?.value,buyerCompany:form.elements.buyerCompany?.value});
         }
         try {
             const result=await json(cfg.api+current.booking+'/'+action,payload);

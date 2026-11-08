@@ -197,7 +197,9 @@ public class StayWorkflowService {
                                 r ->
                                         new Registered(
                                                 r.s("full_name"),
-                                                r.date("date_of_birth"),
+                                                r.s("date_of_birth") == null
+                                                        ? null
+                                                        : r.date("date_of_birth"),
                                                 r.s("nationality_code"),
                                                 r.s("document_number_encrypted") == null
                                                                 || !documents.configured()
@@ -261,6 +263,39 @@ public class StayWorkflowService {
             boolean issueInvoice,
             String buyerAddress,
             String taxCode) {
+        return checkoutWithCompany(
+                booking,
+                lines,
+                reason,
+                key,
+                method,
+                amount,
+                paymentAction,
+                parent,
+                expectedDebt,
+                version,
+                issueInvoice,
+                buyerAddress,
+                taxCode,
+                null);
+    }
+
+    @PreAuthorize("hasAuthority('booking.checkout')")
+    public Receipt checkoutWithCompany(
+            long booking,
+            List<Long> lines,
+            String reason,
+            String key,
+            String method,
+            BigDecimal amount,
+            String paymentAction,
+            Long parent,
+            BigDecimal expectedDebt,
+            long version,
+            boolean issueInvoice,
+            String buyerAddress,
+            String taxCode,
+            String company) {
         var order = bookings.lock(booking);
         db.require(
                 lines != null
@@ -270,7 +305,7 @@ public class StayWorkflowService {
                 "input");
         var selected = lines.stream().map(id -> db.bookingRoom(booking, id)).toList();
         if (selected.stream().allMatch(r -> "CHECKED_OUT".equals(r.s("status"))))
-            return receipt(booking, issueInvoice, buyerAddress, taxCode);
+            return receipt(booking, issueInvoice, buyerAddress, taxCode, company);
         var bill = preview(booking, lines, false);
         reviewed(order, bill, expectedDebt, version);
         reason = db.required(reason, 500);
@@ -297,11 +332,13 @@ public class StayWorkflowService {
             db.require(parent != null && amount.signum() > 0, "refund");
             payments.refund(booking, key, parent, method, amount, reason);
         }
-        return receipt(booking, issueInvoice, buyerAddress, taxCode);
+        return receipt(booking, issueInvoice, buyerAddress, taxCode, company);
     }
 
-    private Receipt receipt(long booking, boolean issue, String address, String taxCode) {
-        return new Receipt(booking, issue ? invoices.issue(booking, address, taxCode) : null);
+    private Receipt receipt(
+            long booking, boolean issue, String address, String taxCode, String company) {
+        return new Receipt(
+                booking, issue ? invoices.issue(booking, address, taxCode, company) : null);
     }
 
     private void reviewed(Row order, Bill bill, BigDecimal expected, long version) {

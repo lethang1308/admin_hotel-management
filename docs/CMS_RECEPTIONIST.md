@@ -6,6 +6,8 @@ Quản lý đặt phòng tại quầy (tra cứu phòng trống, walk-in, xếp/
 
 Thủ tục nhận/trả phòng, QR, đăng ký khách, quyết toán, PDF và hàng đợi dọn phòng xem tại [CMS_RECEPTIONIST_STAYS.md](CMS_RECEPTIONIST_STAYS.md).
 
+Ghi dịch vụ, thu cọc/thanh toán nhiều lần, VietQR, chứng từ, yêu cầu hoàn tiền và hóa đơn công ty xem tại [CMS_RECEPTIONIST_CASHIER.md](CMS_RECEPTIONIST_CASHIER.md). Mô-đun này bổ sung Flyway V7.
+
 ## Ca trực và số liệu
 
 Dashboard hiển thị ca của chính nhân viên đang đăng nhập. Mở ca với số tiền mặt ban đầu và ghi chú, kết ca với số tiền kiểm đếm và lời giải thích khi có chênh lệch. Tiền mặt dự kiến bằng tiền đầu ca cộng thu CASH thành công, trừ hoàn CASH thành công. Chuyển khoản được theo dõi trong công nợ của đơn, riêng với két tiền mặt.

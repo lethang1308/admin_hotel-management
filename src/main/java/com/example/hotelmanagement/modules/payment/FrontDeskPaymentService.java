@@ -29,9 +29,21 @@ public class FrontDeskPaymentService {
             String method,
             BigDecimal amount,
             String reason) {
+        return collectReferenced(booking, key, kind, method, amount, reason, null);
+    }
+
+    @PreAuthorize("hasAuthority('payment.collect')")
+    public long collectReferenced(
+            long booking,
+            String key,
+            String kind,
+            String method,
+            BigDecimal amount,
+            String reason,
+            String reference) {
         var row = db.lockBooking(booking);
         db.require("DEPOSIT".equals(kind) || "PAYMENT".equals(kind), "input");
-        return record(row, key, kind, method, amount, null, reason);
+        return record(row, key, kind, method, amount, null, reason, reference);
     }
 
     @PreAuthorize("hasAuthority('payment.refund')")
@@ -42,14 +54,21 @@ public class FrontDeskPaymentService {
             String method,
             BigDecimal amount,
             String reason) {
+        return refundReferenced(booking, key, parent, method, amount, reason, null);
+    }
+
+    @PreAuthorize("hasAuthority('payment.refund')")
+    public long refundReferenced(
+            long booking,
+            String key,
+            long parent,
+            String method,
+            BigDecimal amount,
+            String reason,
+            String reference) {
+        reason = refundReason(reason);
         return record(
-                db.lockBooking(booking),
-                key,
-                "REFUND",
-                method,
-                amount,
-                parent,
-                db.required(reason, 1000));
+                db.lockBooking(booking), key, "REFUND", method, amount, parent, reason, reference);
     }
 
     private long record(
@@ -59,11 +78,14 @@ public class FrontDeskPaymentService {
             String method,
             BigDecimal amount,
             Long parent,
-            String reason) {
+            String reason,
+            String reference) {
         long bookingId = booking.id("id");
         db.require(key != null && key.matches("[A-F0-9]{24}") && db.actor() != null, "input");
         db.require("CASH".equals(method) || "BANK_TRANSFER".equals(method), "input");
         amount = money(amount, false);
+        reference = db.optional(reference, 150);
+        db.require(reference == null || "BANK_TRANSFER".equals(method), "input");
         var existing = db.rows("SELECT * FROM payment_transactions WHERE idempotency_key=?", key);
         if (!existing.isEmpty()) {
             var payment = existing.get(0);
@@ -73,7 +95,8 @@ public class FrontDeskPaymentService {
                             && payment.s("kind").equals(kind)
                             && payment.s("method").equals(method)
                             && Objects.equals(payment.id("parent_payment_id"), parent)
-                            && payment.money("amount").compareTo(amount) == 0,
+                            && payment.money("amount").compareTo(amount) == 0
+                            && Objects.equals(payment.s("provider_transaction_id"), reference),
                     "idempotency");
             return payment.id("id");
         }
@@ -111,7 +134,9 @@ public class FrontDeskPaymentService {
                                 && Instant.now().isBefore(booking.time("hold_expires_at"))
                                 && amount.compareTo(
                                                 booking.money("deposit_required_amount")
-                                                        .subtract(balance.net()))
+                                                        .min(balance.total().max(ZERO))
+                                                        .subtract(balance.net())
+                                                        .max(ZERO))
                                         <= 0,
                         "deposit");
             else {
@@ -141,7 +166,7 @@ public class FrontDeskPaymentService {
                 db.insert(
                         "payment_transactions",
                         "transaction_code,booking_id,parent_payment_id,kind,method,provider,idempotency_key,amount,currency,"
-                            + "status,work_session_id,created_by,approved_by,reason,paid_at",
+                            + "status,work_session_id,created_by,approved_by,reason,paid_at,provider_transaction_id",
                         code("PT"),
                         bookingId,
                         parent,
@@ -156,7 +181,8 @@ public class FrontDeskPaymentService {
                         db.actor(),
                         refund ? db.actor() : null,
                         db.optional(reason, 1000),
-                        ts(Instant.now()));
+                        ts(Instant.now()),
+                        reference);
         db.event("PAYMENT:" + id, refund ? "PAYMENT_REFUNDED" : "PAYMENT_COLLECTED", bookingId);
         db.audit(
                 "PAYMENT_" + kind,
@@ -238,6 +264,12 @@ public class FrontDeskPaymentService {
                 Map.of(),
                 Map.of("countedCash", counted, "expectedCash", expected, "difference", difference),
                 explanation);
+    }
+
+    public String refundReason(String reason) {
+        reason = db.required(reason, 500);
+        db.require(reason.length() >= 10, "refundReason");
+        return reason;
     }
 
     private long lockEmployee() {

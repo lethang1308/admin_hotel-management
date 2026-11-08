@@ -453,8 +453,9 @@ public class AdminBookingController {
             @PathVariable long id,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String taxCode,
+            @RequestParam(required = false) String company,
             RedirectAttributes flash) {
-        web.mutate(() -> invoices.issue(id, address, taxCode), flash);
+        web.mutate(() -> invoices.issue(id, address, taxCode, company), flash);
         return redirect(id) + "#invoices";
     }
 

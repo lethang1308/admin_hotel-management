@@ -18,6 +18,7 @@
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-booking-desk.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-receptionist.css}">
     <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-stays.css}">
+    <link rel="stylesheet" th:href="@{/admin/assets/static/css/cms-cashier.css}">
     <meta name="csrf-token" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="csrf-header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
 </head>
@@ -60,6 +61,8 @@
 <script th:src="@{/admin/assets/static/js/cms-booking-availability.js}"></script>
 <div th:replace="~{admin/fragments/stay-workflow :: dialogs}"></div>
 <script th:src="@{/admin/assets/static/js/cms-stays.js}"></script>
+<div th:replace="~{admin/fragments/cashier :: dialog}"></div>
+<script th:src="@{/admin/assets/static/js/cms-cashier.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-notifications.js}"></script>
 <script th:src="@{/admin/assets/static/js/cms-identity.js}"></script>
 <th:block th:if="${pageScripts != null}" th:replace="${pageScripts}"/>

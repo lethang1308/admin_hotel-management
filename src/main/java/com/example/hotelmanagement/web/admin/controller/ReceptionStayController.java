@@ -102,7 +102,37 @@ public class ReceptionStayController {
             long version,
             boolean issueInvoice,
             String buyerAddress,
-            String taxCode) {}
+            String taxCode,
+            String buyerCompany) {
+        public Checkout(
+                List<Long> lines,
+                String reason,
+                String key,
+                String method,
+                BigDecimal amount,
+                String paymentAction,
+                Long parent,
+                BigDecimal expectedDebt,
+                long version,
+                boolean issueInvoice,
+                String buyerAddress,
+                String taxCode) {
+            this(
+                    lines,
+                    reason,
+                    key,
+                    method,
+                    amount,
+                    paymentAction,
+                    parent,
+                    expectedDebt,
+                    version,
+                    issueInvoice,
+                    buyerAddress,
+                    taxCode,
+                    null);
+        }
+    }
 
     @PostMapping("/admin/receptionist/stays/{id}/checkout")
     @ResponseBody
@@ -110,7 +140,7 @@ public class ReceptionStayController {
     public ResponseEntity<StayWorkflowService.Receipt> checkout(
             @PathVariable long id, @RequestBody Checkout f) {
         return noCache(
-                workflow.checkout(
+                workflow.checkoutWithCompany(
                         id,
                         f.lines(),
                         f.reason(),
@@ -123,7 +153,8 @@ public class ReceptionStayController {
                         f.version(),
                         f.issueInvoice(),
                         f.buyerAddress(),
-                        f.taxCode()));
+                        f.taxCode(),
+                        f.buyerCompany()));
     }
 
     public record Search(String q, String mode) {}
@@ -177,8 +208,9 @@ public class ReceptionStayController {
     public ResponseEntity<Map<String, Long>> invoice(
             @PathVariable long id,
             @RequestParam(required = false) String address,
-            @RequestParam(required = false) String taxCode) {
-        return noCache(Map.of("invoice", invoices.issue(id, address, taxCode)));
+            @RequestParam(required = false) String taxCode,
+            @RequestParam(required = false) String company) {
+        return noCache(Map.of("invoice", invoices.issue(id, address, taxCode, company)));
     }
 
     private <T> ResponseEntity<T> noCache(T data) {

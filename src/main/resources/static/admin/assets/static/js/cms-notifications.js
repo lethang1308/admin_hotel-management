@@ -67,7 +67,7 @@
             }
             for (const item of data.items) {
                 const link = document.createElement(bell.dataset.canBooking === 'true' ? 'a' : 'div');
-                if (link.tagName === 'A') link.href = bell.dataset.bookingBase + item.bookingId;
+                if (link.tagName === 'A') link.href = item.type.includes('REFUND_') && bell.dataset.cashierBase ? bell.dataset.cashierBase+'?'+new URLSearchParams({booking:item.bookingId,tab:'refunds'}) : bell.dataset.bookingBase + item.bookingId;
                 link.className = 'dropdown-item reception-notice' + (item.read ? '' : ' unread');
                 const title = document.createElement('strong');
                 title.textContent = (bell.dataset['event' + item.type.toLowerCase().replace(/(^|_)([a-z])/g, (_, a, b) => b.toUpperCase())]
