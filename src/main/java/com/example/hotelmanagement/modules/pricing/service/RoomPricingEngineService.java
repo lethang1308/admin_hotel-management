@@ -58,6 +58,32 @@ public class RoomPricingEngineService {
         }
     }
 
+    /** Public discovery prices, evaluated together against the same published rate rules. */
+    public Map<Long, Quote> discoveryQuotes(List<Stay> stays) {
+        if (stays.isEmpty()) return Map.of();
+        var ctx = context(null, null);
+        var now = Instant.now();
+        Map<Long, Quote> quotes = new LinkedHashMap<>();
+        try {
+            for (var stay : stays) {
+                quotes.put(
+                        stay.roomTypeId(),
+                        calculator.quote(new Request(List.of(stay), null, null, now, null), ctx));
+            }
+            return quotes;
+        } catch (PricingCalculationException error) {
+            throw messages.error(error.getMessage());
+        }
+    }
+
+    public PricingModels.Calendar discoveryCalendar(LocalDate from, LocalDate until) {
+        try {
+            return calculator.calendar(context(null, null), from, until);
+        } catch (PricingCalculationException error) {
+            throw messages.error(error.getMessage());
+        }
+    }
+
     @PreAuthorize("hasAuthority('booking.update.any')")
     public Quote quoteAdjustment(Stay stay) {
         try {

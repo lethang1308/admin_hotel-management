@@ -118,6 +118,15 @@ public class SecurityConfig {
                                                 "/api/v1/auth/reset-password")
                                         .permitAll()
                                         .requestMatchers(
+                                                HttpMethod.GET,
+                                                "/api/v1/hotels",
+                                                "/api/v1/hotels/**")
+                                        .permitAll()
+                                        .requestMatchers(
+                                                "/api/v1/users/wishlist",
+                                                "/api/v1/users/wishlist/**")
+                                        .authenticated()
+                                        .requestMatchers(
                                                 "/api/v1/users/profile",
                                                 "/api/v1/users/profile/avatar")
                                         .authenticated()
