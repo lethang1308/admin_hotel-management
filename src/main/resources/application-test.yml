@@ -22,6 +22,8 @@ logging:
     com.example.hotelmanagement: INFO
 
 app:
+  booking:
+    sandbox-enabled: ${BOOKING_SANDBOX_ENABLED:true}
   guest-mail:
     worker-enabled: false
   reception:

@@ -128,7 +128,10 @@ public class SecurityConfig {
                                         .authenticated()
                                         .requestMatchers(
                                                 "/api/v1/users/profile",
-                                                "/api/v1/users/profile/avatar")
+                                                "/api/v1/users/profile/avatar",
+                                                "/api/v1/users/myBookings",
+                                                "/api/v1/users/guests",
+                                                "/api/v1/users/guests/*")
                                         .authenticated()
                                         .requestMatchers("/api/v1/users/**")
                                         .hasRole(SecurityConstants.ROLE_ADMIN)

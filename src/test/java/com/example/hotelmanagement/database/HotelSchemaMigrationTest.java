@@ -157,7 +157,7 @@ class HotelSchemaMigrationTest {
                 }
             }
         }
-        assertThat(design).hasSize(62);
+        assertThat(design).hasSize(63);
         // V4 extends the original DBML contract for the CMS security and identity fields.
         design.get("users").add("security_version");
         design.get("customers")
@@ -211,7 +211,7 @@ class HotelSchemaMigrationTest {
                                         + " constraint_schema="
                                         + schemaFunction
                                         + " AND constraint_type='FOREIGN KEY'"))
-                .isEqualTo("133");
+                .isEqualTo("134");
         assertThat(
                         scalar(
                                 c,
@@ -219,7 +219,7 @@ class HotelSchemaMigrationTest {
                                         + " constraint_schema="
                                         + schemaFunction
                                         + " AND constraint_type='CHECK'"))
-                .isEqualTo("85");
+                .isEqualTo("87");
     }
 
     private static void assertReferenceData(Connection c) throws SQLException {

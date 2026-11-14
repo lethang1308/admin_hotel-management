@@ -64,6 +64,7 @@ public final class CmsTestData {
                     "surcharge_policies",
                     "account_tokens",
                     "employees",
+                    "saved_guests",
                     "customers",
                     "refresh_tokens",
                     "user_roles",

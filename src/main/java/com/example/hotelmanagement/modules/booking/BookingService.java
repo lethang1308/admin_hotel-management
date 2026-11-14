@@ -3,6 +3,8 @@ package com.example.hotelmanagement.modules.booking;
 import static com.example.hotelmanagement.modules.booking.OperationsStore.*;
 import static com.example.hotelmanagement.modules.pricing.dto.PricingModels.*;
 
+import com.example.hotelmanagement.common.exception.BusinessException;
+import com.example.hotelmanagement.common.exception.ErrorCode;
 import com.example.hotelmanagement.modules.allocation.RoomAllocationService;
 import com.example.hotelmanagement.modules.allocation.RoomAllocationService.Window;
 import com.example.hotelmanagement.modules.hotel.service.HotelInventoryCoordinator;
@@ -55,6 +57,7 @@ public class BookingService {
 
     @PreAuthorize("hasAuthority('booking.create')")
     public long create(Create input, BigDecimal expectedTotal) {
+        db.require("PHONE".equals(input.source()) || "WALK_IN".equals(input.source()), "input");
         inventory.lock();
         db.require(
                 input.requestKey() != null
@@ -67,7 +70,10 @@ public class BookingService {
             db.require(Objects.equals(existing.get(0).id("created_by"), db.actor()), "input");
             return existing.get(0).id("id");
         }
-        db.require("PHONE".equals(input.source()) || "WALK_IN".equals(input.source()), "input");
+        return createLocked(input, expectedTotal, code, false);
+    }
+
+    long createLocked(Create input, BigDecimal expectedTotal, String code, boolean online) {
         var customer =
                 input.customerId() == null
                         ? null
@@ -95,9 +101,13 @@ public class BookingService {
                                         voucher)
                                 .id("id");
         Quote quote = price(input.rooms(), voucher, customerId);
-        db.require(
-                expectedTotal != null && expectedTotal.compareTo(quote.totalAmount()) == 0,
-                "priceChanged");
+        boolean samePrice =
+                expectedTotal != null && expectedTotal.compareTo(quote.totalAmount()) == 0;
+        if (online && !samePrice)
+            throw new BusinessException(
+                    ErrorCode.BOOKING_CONFLICT,
+                    "Giá phòng đã thay đổi. Vui lòng kiểm tra lại báo giá.");
+        db.require(samePrice, "priceChanged");
         var policy = quote.policies();
         var zone = ZoneId.of(policy.timezone());
         Instant expires =
@@ -162,22 +172,7 @@ public class BookingService {
             for (var night : nights) postNight(id, line, night, "HELD", policy.taxPercent(), null);
             history(id, line, null, "PENDING", null);
         }
-        if (voucherId != null)
-            db.insert(
-                    "voucher_redemptions",
-                    "voucher_id,booking_id,customer_id,discount_amount,voucher_snapshot",
-                    voucherId,
-                    id,
-                    customerId,
-                    quote.voucherDiscountTotal(),
-                    db.json(
-                            Map.of(
-                                    "code",
-                                    quote.voucherCode(),
-                                    "discount",
-                                    quote.voucherDiscountTotal(),
-                                    "releaseOnFullCancellationBeforeStay",
-                                    true)));
+        if (voucherId != null) reserveVoucher(id, customerId, voucherId, quote);
         history(id, null, null, "PENDING", null);
         db.event("BOOKING:" + id + ":CREATED", "BOOKING_CREATED", id);
         db.audit(
@@ -190,19 +185,57 @@ public class BookingService {
         return id;
     }
 
-    private Quote price(List<RoomInput> rooms, String voucher, Long customer) {
+    void reserveVoucher(long id, long customerId, long voucherId, Quote quote) {
+        String snapshot =
+                db.json(
+                        Map.of(
+                                "code",
+                                quote.voucherCode(),
+                                "discount",
+                                quote.voucherDiscountTotal(),
+                                "releaseOnFullCancellationBeforeStay",
+                                true));
+        if (db.update(
+                        """
+                UPDATE voucher_redemptions SET voucher_id=?, discount_amount=?, voucher_snapshot=?,
+                    status='RESERVED', reserved_at=CURRENT_TIMESTAMP(6), released_at=NULL, redeemed_at=NULL
+                WHERE booking_id=? AND status='RELEASED'
+                """,
+                        voucherId,
+                        quote.voucherDiscountTotal(),
+                        snapshot,
+                        id)
+                == 0)
+            db.insert(
+                    "voucher_redemptions",
+                    "voucher_id,booking_id,customer_id,discount_amount,voucher_snapshot",
+                    voucherId,
+                    id,
+                    customerId,
+                    quote.voucherDiscountTotal(),
+                    snapshot);
+    }
+
+    Quote price(List<RoomInput> rooms, String voucher, Long customer) {
+        return price(rooms, voucher, customer, null);
+    }
+
+    Quote price(List<RoomInput> rooms, String voucher, Long customer, Hotel frozenPolicy) {
         db.require(rooms != null && !rooms.isEmpty() && rooms.size() <= 12, "input");
         for (var room : rooms) {
             validateWindow(room.window());
             capacity(room.typeId(), room.adults(), room.children());
         }
-        return pricing.quote(
+        var request =
                 new Request(
                         rooms.stream().map(r -> new Stay(r.typeId(), r.from(), r.to(), 1)).toList(),
                         voucher,
                         customer,
                         Instant.now(),
-                        null));
+                        null);
+        return frozenPolicy == null
+                ? pricing.quote(request)
+                : pricing.quoteWithPolicy(request, frozenPolicy);
     }
 
     void validateWindow(Window window) {
@@ -306,7 +339,11 @@ public class BookingService {
 
     @PreAuthorize("hasAuthority('booking.confirm')")
     public void confirm(long id, String reason) {
-        var booking = lock(id);
+        confirmHeld(lock(id), reason, db.actor());
+    }
+
+    void confirmHeld(Row booking, String reason, Long staffApprover) {
+        long id = booking.id("id");
         if ("CONFIRMED".equals(booking.s("status"))) return;
         reason = db.required(reason, 1000);
         db.require(
@@ -336,8 +373,9 @@ public class BookingService {
         }
         db.update(
                 "UPDATE bookings SET confirmed_by=?,confirmed_at=CURRENT_TIMESTAMP(6) WHERE id=?",
-                db.actor(),
+                staffApprover,
                 id);
+        closePendingOnlinePayments(id);
         db.update(
                 "UPDATE voucher_redemptions SET status='REDEEMED',redeemed_at=CURRENT_TIMESTAMP(6)"
                         + " WHERE booking_id=? AND status='RESERVED'",
@@ -401,8 +439,8 @@ public class BookingService {
                 credit.add(
                         db.sum(
                                 "SELECT COALESCE(SUM(amount),0) FROM booking_charges WHERE"
-                                    + " booking_id=? AND booking_room_id=? AND source_key LIKE"
-                                    + " 'GUEST-ADDON:%' AND status='POSTED'",
+                                        + " booking_id=? AND booking_room_id=? AND source_key LIKE"
+                                        + " 'GUEST-ADDON:%' AND status='POSTED'",
                                 id, lineId));
         var debt = ledger.balance(id).debt().subtract(credit).add(fee);
         return new NoShowReview(amount, fee, debt, debt.negate().max(ZERO));
@@ -417,7 +455,16 @@ public class BookingService {
         terminate(id, null, "EXPIRED", "Hết hạn giữ chỗ / Hold expired");
     }
 
-    private void terminate(long id, Long lineId, String action, String reason) {
+    void closePendingOnlinePayments(long id) {
+        db.update(
+                """
+                UPDATE payment_transactions SET status='CANCELLED', updated_at=CURRENT_TIMESTAMP(6)
+                WHERE booking_id=? AND provider='SANDBOX' AND status='PENDING'
+                """,
+                id);
+    }
+
+    void terminate(long id, Long lineId, String action, String reason) {
         var booking = lock(id);
         Instant now = Instant.now();
         if (action.equals("EXPIRED")
@@ -550,12 +597,18 @@ public class BookingService {
                 .noneMatch(
                         l ->
                                 Set.of("PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT")
-                                        .contains(l.s("status"))))
+                                        .contains(l.s("status")))) {
+            closePendingOnlinePayments(id);
+            db.update(
+                    "UPDATE booking_qr_tokens SET revoked_at=CURRENT_TIMESTAMP(6) WHERE"
+                        + " booking_id=? AND revoked_at IS NULL",
+                    id);
             db.update(
                     "UPDATE voucher_redemptions SET"
                         + " status='RELEASED',released_at=CURRENT_TIMESTAMP(6) WHERE booking_id=?"
                         + " AND status<>'RELEASED'",
                     id);
+        }
         aggregate(booking, reason);
         db.event(
                 "BOOKING:" + id + ":" + action + ":" + selected.get(0).id("id"),

@@ -32,6 +32,8 @@ logging:
     org.hibernate.SQL: DEBUG
 
 app:
+  booking:
+    sandbox-enabled: ${BOOKING_SANDBOX_ENABLED:true}
   jwt:
     allow-ephemeral-dev-key: true
   cors:

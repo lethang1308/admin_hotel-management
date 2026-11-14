@@ -513,6 +513,7 @@ Table voucher_room_types {
 
 // ── 04. ĐẶT PHÒNG, GIÁ TỪNG ĐÊM, GIỮ CHỖ, XẾP PHÒNG ────────────────────
 Table bookings {
+  online_request_key varchar(64)
   id bigint [pk, increment]
   booking_code varchar(30) [not null, unique]
   customer_id bigint [not null, ref: > customers.id]
@@ -1254,4 +1255,17 @@ Table guest_messages {
   qr_payload varchar(100)
   created_by bigint [ref: > users.id]
   created_at datetime(6) [not null, default: `CURRENT_TIMESTAMP(6)`]
+}
+
+Table saved_guests {
+  id bigint [pk, increment]
+  customer_id bigint [not null, ref: > customers.id]
+  full_name varchar(150) [not null]
+  date_of_birth date
+  gender varchar(20)
+  guest_type varchar(20) [not null, default: 'ADULT']
+  phone varchar(20)
+  document_type varchar(30)
+  document_number_encrypted text
+  document_number_hash char(64)
 }

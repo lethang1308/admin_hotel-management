@@ -50,6 +50,9 @@ public enum ErrorCode {
             "You do not have permission to perform this action"),
     RESOURCE_NOT_FOUND(
             HttpStatus.NOT_FOUND, "Resource Not Found", "Requested resource was not found"),
+    BOOKING_CONFLICT(HttpStatus.CONFLICT, "Booking Conflict", "The reservation has changed"),
+    BOOKING_HOLD_EXPIRED(
+            HttpStatus.GONE, "Booking Hold Expired", "The reservation hold has expired"),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "Duplicate Resource", "Resource already exists"),
     METHOD_NOT_ALLOWED(
             HttpStatus.METHOD_NOT_ALLOWED, "Method Not Allowed", "HTTP method is not supported"),

@@ -35,13 +35,28 @@ public class RoomPricingEngineService {
 
     @PreAuthorize("hasAnyAuthority('pricing.manage','booking.create')")
     public Quote quote(Request request) {
+        return calculate(request, null);
+    }
+
+    @PreAuthorize("hasAuthority('booking.create')")
+    public Quote quoteWithPolicy(Request request, Hotel policy) {
+        return calculate(request, Objects.requireNonNull(policy));
+    }
+
+    private Quote calculate(Request request, Hotel policy) {
         if (request.customerId() != null)
             support.require(
                     support.count("SELECT COUNT(*) FROM customers WHERE id=?", request.customerId())
                             == 1,
                     "price.error.customer");
         try {
-            return calculator.quote(request, context(request.voucherCode(), request.customerId()));
+            var context = context(request.voucherCode(), request.customerId());
+            return calculator.quote(
+                    request,
+                    policy == null
+                            ? context
+                            : new Context(
+                                    context.types(), context.rules(), context.voucher(), policy));
         } catch (PricingCalculationException e) {
             throw messages.error(e.getMessage());
         }
